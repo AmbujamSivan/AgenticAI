@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: aeromindiq-postgres
+    environment:
+      POSTGRES_DB: aeromindiq
+      POSTGRES_USER: aeromind_admin
+      POSTGRES_PASSWORD: aeromind_admin_pw
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./seed.sql:/docker-entrypoint-initdb.d/seed.sql:ro
+      - aeromindiq_pgdata:/var/lib/postgresql/data
+
+volumes:
+  aeromindiq_pgdata:

@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AeroMindIQ.Agents/AeroMindIQ.Agents.csproj" />
+    <Project Path="src/AeroMindIQ.Console/AeroMindIQ.Console.csproj" />
+    <Project Path="src/AeroMindIQ.Data/AeroMindIQ.Data.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,9 @@
+bin/
+obj/
+*.user
+appsettings.Development.json
+appsettings.Local.json
+.vs/
+.idea/
+reports/*.md
+!reports/.gitkeep

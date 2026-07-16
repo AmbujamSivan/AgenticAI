@@ -13,21 +13,23 @@ public sealed record ReporterResult(string ReportMarkdown, IReadOnlyList<UsageSa
 /// <summary>
 /// Agent C: drafts the root-cause markdown report from the Auditor's anomaly and the
 /// Fetcher's query findings. Groundedness is enforced structurally in the prompt — it is
-/// instructed to cite only values present in the supplied data. An automated LLM-as-judge
-/// groundedness check is a follow-up milestone, not built here.
+/// instructed to cite only values present in the supplied data. The LLM-as-judge
+/// groundedness check (GroundednessJudge) runs afterward, as a separate agent.
 /// </summary>
-public sealed class ReporterAgent
+public sealed class ReporterAgent(string geminiApiKey, string geminiModelId)
 {
     private const string AgentName = "Reporter";
-    private readonly ChatCompletionAgent _agent;
 
-    public ReporterAgent(string geminiApiKey, string geminiModelId)
+    public Task<ReporterResult> DraftReportAsync(AnomalyContext anomaly, string fetcherFindings) =>
+        GeminiRetryPolicy.ExecuteAsync(() => DraftReportOnceAsync(anomaly, fetcherFindings), AgentName);
+
+    private async Task<ReporterResult> DraftReportOnceAsync(AnomalyContext anomaly, string fetcherFindings)
     {
         var builder = Kernel.CreateBuilder();
         builder.AddGoogleAIGeminiChatCompletion(modelId: geminiModelId, apiKey: geminiApiKey);
         var kernel = builder.Build();
 
-        _agent = new ChatCompletionAgent
+        var agent = new ChatCompletionAgent
         {
             Name = AgentName,
             Instructions = """
@@ -47,10 +49,7 @@ public sealed class ReporterAgent
                 """,
             Kernel = kernel
         };
-    }
 
-    public async Task<ReporterResult> DraftReportAsync(AnomalyContext anomaly, string fetcherFindings)
-    {
         var thread = new ChatHistoryAgentThread();
         var usage = new List<UsageSample>();
         var reportParts = new List<string>();
@@ -64,7 +63,7 @@ public sealed class ReporterAgent
             Draft the root-cause report now.
             """;
 
-        await foreach (var response in _agent.InvokeAsync(new ChatMessageContent(AuthorRole.User, prompt), thread))
+        await foreach (var response in agent.InvokeAsync(new ChatMessageContent(AuthorRole.User, prompt), thread))
         {
             var message = response.Message;
             reportParts.Add(message.Content ?? string.Empty);

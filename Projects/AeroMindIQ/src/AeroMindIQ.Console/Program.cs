@@ -1,6 +1,7 @@
 using AeroMindIQ.Agents;
 using AeroMindIQ.Data;
 using Microsoft.Extensions.Configuration;
+using OpenTelemetry.Trace;
 
 namespace AeroMindIQ.Console;
 
@@ -15,79 +16,121 @@ internal class Program
             .AddEnvironmentVariables()
             .Build();
 
-        var adminConnectionString = config.GetConnectionString("AdminConnection")
-            ?? throw new InvalidOperationException("Missing ConnectionStrings:AdminConnection in configuration.");
-        var readOnlyConnectionString = config.GetConnectionString("ReadOnlyConnection")
-            ?? throw new InvalidOperationException("Missing ConnectionStrings:ReadOnlyConnection in configuration.");
+        using var tracerProvider = Telemetry.Build(
+            config["Langfuse:OtlpEndpoint"],
+            config["Langfuse:PublicKey"],
+            config["Langfuse:SecretKey"]);
 
-        var geminiApiKey = config["Gemini:ApiKey"];
-        if (string.IsNullOrWhiteSpace(geminiApiKey))
+        try
         {
-            System.Console.Error.WriteLine(
-                "Missing Gemini:ApiKey. Set it in src/AeroMindIQ.Console/appsettings.Development.json " +
-                "(gitignored) or the GEMINI__APIKEY environment variable.");
-            return 1;
-        }
+            using var cycleActivity = Telemetry.ActivitySource.StartActivity("aeromindiq.cycle");
 
-        var fetcherModel = config["Gemini:FetcherModel"] ?? "gemini-2.5-flash";
-        var reporterModel = config["Gemini:ReporterModel"] ?? "gemini-2.5-flash";
+            var adminConnectionString = config.GetConnectionString("AdminConnection")
+                ?? throw new InvalidOperationException("Missing ConnectionStrings:AdminConnection in configuration.");
+            var readOnlyConnectionString = config.GetConnectionString("ReadOnlyConnection")
+                ?? throw new InvalidOperationException("Missing ConnectionStrings:ReadOnlyConnection in configuration.");
 
-        System.Console.WriteLine("AeroMind IQ — running one detection cycle...");
-        System.Console.WriteLine();
+            var geminiApiKey = config["Gemini:ApiKey"];
+            if (string.IsNullOrWhiteSpace(geminiApiKey))
+            {
+                System.Console.Error.WriteLine(
+                    "Missing Gemini:ApiKey. Set it in src/AeroMindIQ.Console/appsettings.Development.json " +
+                    "(gitignored) or the GEMINI__APIKEY environment variable.");
+                return 1;
+            }
 
-        System.Console.WriteLine("Agent A (Auditor): checking production_runs for anomalies...");
-        var anomalies = await AuditorAgent.CheckForAnomaliesAsync(adminConnectionString);
+            var fetcherModel = config["Gemini:FetcherModel"] ?? "gemini-2.5-flash";
+            var reporterModel = config["Gemini:ReporterModel"] ?? "gemini-2.5-flash";
+            var reviewerModel = config["Gemini:ReviewerModel"] ?? "gemini-2.5-flash";
+            var judgeModel = config["Gemini:JudgeModel"] ?? "gemini-2.5-flash";
 
-        if (anomalies.Count == 0)
-        {
-            System.Console.WriteLine("No anomalies detected (nothing exceeds the 3-sigma threshold). Nothing to investigate.");
+            var mlScoringBaseUrl = config["MlScoringService:BaseUrl"] ?? "http://localhost:8500";
+            using var mlHttpClient = new HttpClient { BaseAddress = new Uri(mlScoringBaseUrl), Timeout = TimeSpan.FromSeconds(10) };
+            var mlScoringClient = new MlScoringClient(mlHttpClient);
+
+            System.Console.WriteLine("AeroMind IQ — running one detection cycle...");
+            System.Console.WriteLine();
+
+            System.Console.WriteLine("Agent A (Auditor): checking production_runs for anomalies (Isolation Forest, falling back to 3-sigma)...");
+            var anomalies = await AuditorAgent.CheckForAnomaliesViaModelAsync(adminConnectionString, mlScoringClient);
+
+            if (anomalies.Count == 0)
+            {
+                System.Console.WriteLine("No anomalies detected. Nothing to investigate.");
+                return 0;
+            }
+
+            var anomaly = anomalies[0];
+            System.Console.WriteLine($"Anomaly triggered: {anomaly.Describe()}");
+            System.Console.WriteLine();
+
+            cycleActivity?.SetTag("anomaly.line_id", anomaly.LineId);
+            cycleActivity?.SetTag("anomaly.trigger_source", anomaly.TriggerSource);
+
+            var usageTracker = new UsageTracker();
+
+            System.Console.WriteLine("Agent B (Fetcher): gathering supporting evidence via safe SQL (reviewed by Agent Reviewer)...");
+            var schemaDescription = await SchemaReader.DescribeSchemaAsync(adminConnectionString);
+            var reviewer = new ReviewerAgent(geminiApiKey, reviewerModel);
+            var fetcher = new FetcherAgent(geminiApiKey, fetcherModel, readOnlyConnectionString, schemaDescription, reviewer);
+            var fetcherResult = await fetcher.InvestigateAsync(anomaly);
+            foreach (var sample in fetcherResult.Usage)
+                usageTracker.Record(sample);
+
+            System.Console.WriteLine("Fetcher findings:");
+            System.Console.WriteLine(fetcherResult.QueryFindings);
+            System.Console.WriteLine();
+
+            System.Console.WriteLine("Agent C (Reporter): drafting root-cause report...");
+            var reporter = new ReporterAgent(geminiApiKey, reporterModel);
+            var reporterResult = await reporter.DraftReportAsync(anomaly, fetcherResult.QueryFindings);
+            foreach (var sample in reporterResult.Usage)
+                usageTracker.Record(sample);
+
+            System.Console.WriteLine("Agent D (Judge): grading the report's groundedness...");
+            var judge = new GroundednessJudge(geminiApiKey, judgeModel);
+            var judgeResult = await judge.EvaluateAsync(reporterResult.ReportMarkdown, fetcherResult.QueryFindings);
+            if (judgeResult.Usage is not null)
+                usageTracker.Record(judgeResult.Usage);
+
+            cycleActivity?.SetTag("judge.grounded", judgeResult.Grounded);
+
+            var reportsDir = Path.Combine(FindRepoRoot(), "reports");
+            Directory.CreateDirectory(reportsDir);
+
+            var timestamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss");
+            var reportPath = Path.Combine(reportsDir, $"root-cause-report-{timestamp}.md");
+            var reportContent = $"""
+                # AeroMind IQ — Root Cause Report
+
+                {reporterResult.ReportMarkdown}
+
+                ---
+
+                {judgeResult.Summarize()}
+
+                ---
+
+                {usageTracker.Summarize()}
+                """;
+            await File.WriteAllTextAsync(reportPath, reportContent);
+
+            System.Console.WriteLine();
+            System.Console.WriteLine(judgeResult.Summarize());
+            System.Console.WriteLine();
+            System.Console.WriteLine(usageTracker.Summarize());
+            System.Console.WriteLine($"Report written to {reportPath}");
+
             return 0;
         }
-
-        var anomaly = anomalies[0];
-        System.Console.WriteLine($"Anomaly triggered: {anomaly.Describe()}");
-        System.Console.WriteLine();
-
-        var usageTracker = new UsageTracker();
-
-        System.Console.WriteLine("Agent B (Fetcher): gathering supporting evidence via safe SQL...");
-        var schemaDescription = await SchemaReader.DescribeSchemaAsync(adminConnectionString);
-        var fetcher = new FetcherAgent(geminiApiKey, fetcherModel, readOnlyConnectionString, schemaDescription);
-        var fetcherResult = await fetcher.InvestigateAsync(anomaly);
-        foreach (var sample in fetcherResult.Usage)
-            usageTracker.Record(sample);
-
-        System.Console.WriteLine("Fetcher findings:");
-        System.Console.WriteLine(fetcherResult.QueryFindings);
-        System.Console.WriteLine();
-
-        System.Console.WriteLine("Agent C (Reporter): drafting root-cause report...");
-        var reporter = new ReporterAgent(geminiApiKey, reporterModel);
-        var reporterResult = await reporter.DraftReportAsync(anomaly, fetcherResult.QueryFindings);
-        foreach (var sample in reporterResult.Usage)
-            usageTracker.Record(sample);
-
-        var reportsDir = Path.Combine(FindRepoRoot(), "reports");
-        Directory.CreateDirectory(reportsDir);
-
-        var timestamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss");
-        var reportPath = Path.Combine(reportsDir, $"root-cause-report-{timestamp}.md");
-        var reportContent = $"""
-            # AeroMind IQ — Root Cause Report
-
-            {reporterResult.ReportMarkdown}
-
-            ---
-
-            {usageTracker.Summarize()}
-            """;
-        await File.WriteAllTextAsync(reportPath, reportContent);
-
-        System.Console.WriteLine();
-        System.Console.WriteLine(usageTracker.Summarize());
-        System.Console.WriteLine($"Report written to {reportPath}");
-
-        return 0;
+        finally
+        {
+            // This is a short-lived console app, not a hosted service: OpenTelemetry
+            // batches spans in memory and flushes them on a background timer by default,
+            // so without an explicit flush here, the process could exit before the last
+            // batch of spans is ever sent to Langfuse.
+            tracerProvider?.ForceFlush();
+        }
     }
 
     private static string FindRepoRoot()

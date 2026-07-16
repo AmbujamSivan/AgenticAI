@@ -1,5 +1,9 @@
 {
   "Gemini": {
     "ApiKey": "PASTE_YOUR_GEMINI_API_KEY_HERE"
+  },
+  "Langfuse": {
+    "PublicKey": "PASTE_YOUR_LANGFUSE_PUBLIC_KEY_HERE",
+    "SecretKey": "PASTE_YOUR_LANGFUSE_SECRET_KEY_HERE"
   }
 }

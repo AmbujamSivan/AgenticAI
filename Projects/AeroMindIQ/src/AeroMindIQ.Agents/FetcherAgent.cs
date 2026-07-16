@@ -12,28 +12,45 @@ public sealed record FetcherResult(string QueryFindings, IReadOnlyList<UsageSamp
 
 /// <summary>
 /// Agent B: given the Auditor's AnomalyContext, writes and executes safe SQL (via
-/// DatabasePlugin/SqlGuard) to gather supporting evidence, and summarizes what it found.
+/// DatabasePlugin, reviewed by the Reviewer agent, guarded by SqlGuard) to gather
+/// supporting evidence, and summarizes what it found.
+///
+/// The kernel/agent/plugin are built fresh inside InvestigateAsync rather than in the
+/// constructor, because DatabasePlugin needs the AnomalyContext (only known once an
+/// investigation starts) and its rejection counter/usage log should be scoped to one
+/// investigation, not the FetcherAgent's whole lifetime.
 /// </summary>
-public sealed class FetcherAgent
+public sealed class FetcherAgent(
+    string geminiApiKey,
+    string geminiModelId,
+    string readOnlyConnectionString,
+    string schemaDescription,
+    ReviewerAgent reviewer)
 {
     private const string AgentName = "Fetcher";
-    private readonly ChatCompletionAgent _agent;
 
-    public FetcherAgent(string geminiApiKey, string geminiModelId, string readOnlyConnectionString, string schemaDescription)
+    public Task<FetcherResult> InvestigateAsync(AnomalyContext anomaly) =>
+        GeminiRetryPolicy.ExecuteAsync(() => InvestigateOnceAsync(anomaly), AgentName);
+
+    private async Task<FetcherResult> InvestigateOnceAsync(AnomalyContext anomaly)
     {
         var builder = Kernel.CreateBuilder();
         builder.AddGoogleAIGeminiChatCompletion(modelId: geminiModelId, apiKey: geminiApiKey);
         var kernel = builder.Build();
-        kernel.Plugins.AddFromObject(new DatabasePlugin(readOnlyConnectionString), "Database");
 
-        _agent = new ChatCompletionAgent
+        var databasePlugin = new DatabasePlugin(readOnlyConnectionString, reviewer, anomaly, schemaDescription);
+        kernel.Plugins.AddFromObject(databasePlugin, "Database");
+
+        var agent = new ChatCompletionAgent
         {
             Name = AgentName,
             Instructions = $"""
                 You are a data-fetching agent investigating a production anomaly in a
                 manufacturing database. You may only access data via the run_read_only_query
-                function, which accepts a single read-only SELECT statement. Never ask for
-                anything but SELECT queries — writes are not possible and will be rejected.
+                function, which accepts a single read-only SELECT statement. Every query you
+                propose is reviewed by a critic agent before it runs — if it comes back
+                rejected, revise it based on the feedback. Never ask for anything but SELECT
+                queries — writes are not possible and will be rejected.
 
                 Database schema:
                 {schemaDescription}
@@ -49,17 +66,14 @@ public sealed class FetcherAgent
                 FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
             })
         };
-    }
 
-    public async Task<FetcherResult> InvestigateAsync(AnomalyContext anomaly)
-    {
         var thread = new ChatHistoryAgentThread();
         var usage = new List<UsageSample>();
         var findings = new List<string>();
 
         var prompt = $"Anomaly detected: {anomaly.Describe()}\n\nInvestigate and report the raw data you gathered.";
 
-        await foreach (var response in _agent.InvokeAsync(new ChatMessageContent(AuthorRole.User, prompt), thread))
+        await foreach (var response in agent.InvokeAsync(new ChatMessageContent(AuthorRole.User, prompt), thread))
         {
             var message = response.Message;
             findings.Add(message.Content ?? string.Empty);
@@ -68,6 +82,8 @@ public sealed class FetcherAgent
             if (sample is not null)
                 usage.Add(sample);
         }
+
+        usage.AddRange(databasePlugin.Usage);
 
         return new FetcherResult(string.Join("\n", findings), usage);
     }

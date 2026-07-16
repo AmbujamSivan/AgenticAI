@@ -7,3 +7,13 @@ appsettings.Local.json
 .idea/
 reports/*.md
 !reports/.gitkeep
+
+# Python (ml/)
+ml/.venv/
+ml/model/*.joblib
+ml/__pycache__/
+ml/**/__pycache__/
+*.pyc
+
+# Langfuse local dev credentials
+observability/.env

@@ -5,26 +5,12 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Anthropic;
 using Anthropic.Exceptions;
+using Anthropic.Services;
 using AnthropicMessages = Anthropic.Models.Messages;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 
 namespace AeroMindIQ.Agents;
-
-public static class AnthropicKernelBuilderExtensions
-{
-    /// <summary>
-    /// No official Semantic Kernel connector exists for Anthropic's direct API (only via
-    /// Amazon Bedrock). This registers the custom IChatCompletionService below the same
-    /// way SK's own Add*ChatCompletion extension methods do.
-    /// </summary>
-    public static IKernelBuilder AddAnthropicChatCompletion(this IKernelBuilder builder, string modelId, string apiKey)
-    {
-        builder.Services.AddSingleton<IChatCompletionService>(_ => new AnthropicChatCompletionService(modelId, apiKey));
-        return builder;
-    }
-}
 
 /// <summary>
 /// Wraps Anthropic's official .NET SDK behind Semantic Kernel's IChatCompletionService.
@@ -44,13 +30,23 @@ public sealed class AnthropicChatCompletionService : IChatCompletionService
     private const int MaxAutoInvokeIterations = 10;
     private const string ToolNameSeparator = "__";
 
-    private readonly AnthropicClient _client;
+    private readonly IMessageService _messages;
     private readonly string _modelId;
 
     public AnthropicChatCompletionService(string modelId, string apiKey)
+        : this(modelId, new AnthropicClient { ApiKey = apiKey }.Messages)
+    {
+    }
+
+    /// <summary>
+    /// Depends on IMessageService (the single method surface this connector actually
+    /// calls) rather than the whole AnthropicClient, so tests can substitute a fake
+    /// without needing to implement AnthropicClient's much larger member surface.
+    /// </summary>
+    public AnthropicChatCompletionService(string modelId, IMessageService messageService)
     {
         _modelId = modelId;
-        _client = new AnthropicClient { ApiKey = apiKey };
+        _messages = messageService;
     }
 
     public IReadOnlyDictionary<string, object?> Attributes { get; } = new Dictionary<string, object?>();
@@ -82,7 +78,7 @@ public sealed class AnthropicChatCompletionService : IChatCompletionService
             AnthropicMessages.Message response;
             try
             {
-                response = await _client.Messages.Create(createParams, cancellationToken);
+                response = await _messages.Create(createParams, cancellationToken);
             }
             catch (AnthropicRateLimitException ex)
             {

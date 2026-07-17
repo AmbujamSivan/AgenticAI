@@ -51,3 +51,17 @@ Reviewer loop and no full observability stack yet. See "Follow-up milestones" be
 2. A Reviewer/critic agent that checks the Fetcher's SQL before execution, with a max-retry cap.
 3. Langfuse + OpenTelemetry: real tracing across agent handoffs, cost dashboards.
 4. An LLM-as-judge groundedness eval over the Reporter's output.
+
+## Testing
+
+```bash
+dotnet test                                    # fast, free, offline — 43 tests, ~70ms
+dotnet test --filter Category=Live             # opt-in: needs local Postgres + a real API key
+```
+
+The default run mocks every LLM call (`Fakes/FakeChatCompletionService.cs`,
+`Fakes/FakeMessageService.cs`) — no network, no token cost. This is what caught the real bug
+found during Phase 3 verification: the custom Anthropic connector's tool-calling loop
+(`AnthropicChatCompletionServiceTests.cs` reproduces it directly). `Category=Live` tests hit
+the real Claude API and the local Postgres from `db/docker-compose.yml`; they're excluded by
+default since they cost real tokens and need infrastructure a bare checkout won't have.

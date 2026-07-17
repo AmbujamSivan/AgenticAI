@@ -13,8 +13,12 @@ public sealed record ReporterResult(string ReportMarkdown, IReadOnlyList<UsageSa
 /// Fetcher's query findings. Groundedness is enforced structurally in the prompt — it is
 /// instructed to cite only values present in the supplied data. The LLM-as-judge
 /// groundedness check (GroundednessJudge) runs afterward, as a separate agent.
+///
+/// Takes an already-constructed IChatCompletionService (see LlmKernelFactory) rather than
+/// an LlmProviderConfig, so tests can substitute a fake chat completion service without
+/// any provider-selection logic or live API calls in the way.
 /// </summary>
-public sealed class ReporterAgent(LlmProviderConfig providerConfig)
+public sealed class ReporterAgent(IChatCompletionService chatCompletionService, string modelId)
 {
     private const string AgentName = "Reporter";
 
@@ -23,7 +27,7 @@ public sealed class ReporterAgent(LlmProviderConfig providerConfig)
 
     private async Task<ReporterResult> DraftReportOnceAsync(AnomalyContext anomaly, string fetcherFindings)
     {
-        var kernel = LlmKernelFactory.CreateKernel(providerConfig, providerConfig.ReporterModel);
+        var kernel = LlmKernelFactory.WrapInKernel(chatCompletionService);
 
         var agent = new ChatCompletionAgent
         {
@@ -64,7 +68,7 @@ public sealed class ReporterAgent(LlmProviderConfig providerConfig)
             var message = response.Message;
             reportParts.Add(message.Content ?? string.Empty);
 
-            var sample = UsageExtractor.Extract(AgentName, providerConfig.ReporterModel, message);
+            var sample = UsageExtractor.Extract(AgentName, modelId, message);
             if (sample is not null)
                 usage.Add(sample);
         }

@@ -85,8 +85,12 @@ internal class Program
 
             System.Console.WriteLine("Agent B (Fetcher): gathering supporting evidence via safe SQL (reviewed by Agent Reviewer)...");
             var schemaDescription = await SchemaReader.DescribeSchemaAsync(adminConnectionString);
-            var reviewer = new ReviewerAgent(providerConfig);
-            var fetcher = new FetcherAgent(providerConfig, readOnlyConnectionString, schemaDescription, reviewer);
+
+            var reviewerChat = LlmKernelFactory.CreateChatCompletionService(providerConfig, providerConfig.ReviewerModel);
+            var reviewer = new ReviewerAgent(reviewerChat, providerConfig.ReviewerModel);
+
+            var fetcherChat = LlmKernelFactory.CreateChatCompletionService(providerConfig, providerConfig.FetcherModel);
+            var fetcher = new FetcherAgent(fetcherChat, providerConfig.FetcherModel, readOnlyConnectionString, schemaDescription, reviewer);
             var fetcherResult = await fetcher.InvestigateAsync(anomaly);
             foreach (var sample in fetcherResult.Usage)
                 usageTracker.Record(sample);
@@ -96,13 +100,15 @@ internal class Program
             System.Console.WriteLine();
 
             System.Console.WriteLine("Agent C (Reporter): drafting root-cause report...");
-            var reporter = new ReporterAgent(providerConfig);
+            var reporterChat = LlmKernelFactory.CreateChatCompletionService(providerConfig, providerConfig.ReporterModel);
+            var reporter = new ReporterAgent(reporterChat, providerConfig.ReporterModel);
             var reporterResult = await reporter.DraftReportAsync(anomaly, fetcherResult.QueryFindings);
             foreach (var sample in reporterResult.Usage)
                 usageTracker.Record(sample);
 
             System.Console.WriteLine("Agent D (Judge): grading the report's groundedness...");
-            var judge = new GroundednessJudge(providerConfig);
+            var judgeChat = LlmKernelFactory.CreateChatCompletionService(providerConfig, providerConfig.JudgeModel);
+            var judge = new GroundednessJudge(judgeChat, providerConfig.JudgeModel);
             var judgeResult = await judge.EvaluateAsync(reporterResult.ReportMarkdown, fetcherResult.QueryFindings);
             if (judgeResult.Usage is not null)
                 usageTracker.Record(judgeResult.Usage);

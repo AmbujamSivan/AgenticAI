@@ -4,4 +4,7 @@
     <Project Path="src/AeroMindIQ.Console/AeroMindIQ.Console.csproj" />
     <Project Path="src/AeroMindIQ.Data/AeroMindIQ.Data.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AeroMindIQ.Tests/AeroMindIQ.Tests.csproj" />
+  </Folder>
 </Solution>

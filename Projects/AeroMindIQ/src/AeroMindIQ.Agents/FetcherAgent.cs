@@ -17,9 +17,14 @@ public sealed record FetcherResult(string QueryFindings, IReadOnlyList<UsageSamp
 /// constructor, because DatabasePlugin needs the AnomalyContext (only known once an
 /// investigation starts) and its rejection counter/usage log should be scoped to one
 /// investigation, not the FetcherAgent's whole lifetime.
+///
+/// Takes an already-constructed IChatCompletionService (see LlmKernelFactory) rather than
+/// an LlmProviderConfig, so tests can substitute a fake chat completion service without
+/// any provider-selection logic or live API calls in the way.
 /// </summary>
 public sealed class FetcherAgent(
-    LlmProviderConfig providerConfig,
+    IChatCompletionService chatCompletionService,
+    string modelId,
     string readOnlyConnectionString,
     string schemaDescription,
     ReviewerAgent reviewer)
@@ -31,7 +36,7 @@ public sealed class FetcherAgent(
 
     private async Task<FetcherResult> InvestigateOnceAsync(AnomalyContext anomaly)
     {
-        var kernel = LlmKernelFactory.CreateKernel(providerConfig, providerConfig.FetcherModel);
+        var kernel = LlmKernelFactory.WrapInKernel(chatCompletionService);
 
         var databasePlugin = new DatabasePlugin(readOnlyConnectionString, reviewer, anomaly, schemaDescription);
         kernel.Plugins.AddFromObject(databasePlugin, "Database");
@@ -73,7 +78,7 @@ public sealed class FetcherAgent(
             var message = response.Message;
             findings.Add(message.Content ?? string.Empty);
 
-            var sample = UsageExtractor.Extract(AgentName, providerConfig.FetcherModel, message);
+            var sample = UsageExtractor.Extract(AgentName, modelId, message);
             if (sample is not null)
                 usage.Add(sample);
         }

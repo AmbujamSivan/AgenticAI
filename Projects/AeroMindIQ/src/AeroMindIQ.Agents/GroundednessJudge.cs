@@ -28,8 +28,12 @@ public sealed record JudgeVerdict(bool Grounded, IReadOnlyList<string> Unsupport
 /// the end of each cycle — this is a single-shot console app, not a service with an
 /// async eval queue. No labeled eval set calibrates the judge itself yet; that's
 /// surfaced explicitly in the output rather than silently treated as validated.
+///
+/// Takes an already-constructed IChatCompletionService (see LlmKernelFactory) rather than
+/// an LlmProviderConfig, so tests can substitute a fake chat completion service without
+/// any provider-selection logic or live API calls in the way.
 /// </summary>
-public sealed class GroundednessJudge(LlmProviderConfig providerConfig)
+public sealed class GroundednessJudge(IChatCompletionService chatCompletionService, string modelId)
 {
     private const string AgentName = "Judge";
 
@@ -38,7 +42,7 @@ public sealed class GroundednessJudge(LlmProviderConfig providerConfig)
 
     private async Task<JudgeVerdict> EvaluateOnceAsync(string reportMarkdown, string fetcherFindings)
     {
-        var kernel = LlmKernelFactory.CreateKernel(providerConfig, providerConfig.JudgeModel);
+        var kernel = LlmKernelFactory.WrapInKernel(chatCompletionService);
 
         var agent = new ChatCompletionAgent
         {
@@ -74,7 +78,7 @@ public sealed class GroundednessJudge(LlmProviderConfig providerConfig)
         await foreach (var response in agent.InvokeAsync(new ChatMessageContent(AuthorRole.User, prompt), thread))
         {
             lastMessage = response.Message;
-            usage = UsageExtractor.Extract(AgentName, providerConfig.JudgeModel, response.Message) ?? usage;
+            usage = UsageExtractor.Extract(AgentName, modelId, response.Message) ?? usage;
         }
 
         var content = lastMessage?.Content?.Trim() ?? string.Empty;

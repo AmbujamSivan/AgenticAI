@@ -14,8 +14,12 @@ public sealed record ReviewVerdict(bool Approved, string Feedback, UsageSample? 
 /// leaks (unbounded SELECT * on unrelated tables). Called from inside DatabasePlugin
 /// rather than as a separate pipeline stage, so a rejection reuses the same retry path
 /// the Fetcher already uses for SqlGuardException.
+///
+/// Takes an already-constructed IChatCompletionService (see LlmKernelFactory) rather than
+/// an LlmProviderConfig, so tests can substitute a fake chat completion service without
+/// any provider-selection logic or live API calls in the way.
 /// </summary>
-public sealed class ReviewerAgent(LlmProviderConfig providerConfig)
+public sealed class ReviewerAgent(IChatCompletionService chatCompletionService, string modelId)
 {
     private const string AgentName = "Reviewer";
 
@@ -24,7 +28,7 @@ public sealed class ReviewerAgent(LlmProviderConfig providerConfig)
 
     private async Task<ReviewVerdict> ReviewOnceAsync(string sql, string schemaDescription, AnomalyContext anomaly)
     {
-        var kernel = LlmKernelFactory.CreateKernel(providerConfig, providerConfig.ReviewerModel);
+        var kernel = LlmKernelFactory.WrapInKernel(chatCompletionService);
 
         var agent = new ChatCompletionAgent
         {
@@ -64,7 +68,7 @@ public sealed class ReviewerAgent(LlmProviderConfig providerConfig)
         await foreach (var response in agent.InvokeAsync(new ChatMessageContent(AuthorRole.User, prompt), thread))
         {
             lastMessage = response.Message;
-            usage = UsageExtractor.Extract(AgentName, providerConfig.ReviewerModel, response.Message) ?? usage;
+            usage = UsageExtractor.Extract(AgentName, modelId, response.Message) ?? usage;
         }
 
         var content = lastMessage?.Content?.Trim() ?? string.Empty;

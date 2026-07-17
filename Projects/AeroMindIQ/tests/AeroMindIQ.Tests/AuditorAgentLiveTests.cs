@@ -16,13 +16,10 @@ namespace AeroMindIQ.Tests;
 [Trait("Category", "Live")]
 public class AuditorAgentLiveTests
 {
-    private const string AdminConnectionString =
-        "Host=localhost;Port=5432;Database=aeromindiq;Username=aeromind_admin;Password=aeromind_admin_pw";
-
     [Fact]
     public async Task CheckForAnomaliesAsync_AgainstLocalDb_ReturnsWellFormedResultsAsync()
     {
-        var anomalies = await AuditorAgent.CheckForAnomaliesAsync(AdminConnectionString);
+        var anomalies = await AuditorAgent.CheckForAnomaliesAsync(LiveTestDb.AdminConnectionString);
 
         foreach (var anomaly in anomalies)
         {
@@ -41,7 +38,7 @@ public class AuditorAgentLiveTests
         using var httpClient = new HttpClient { BaseAddress = new Uri("http://localhost:1"), Timeout = TimeSpan.FromSeconds(2) };
         var scoringClient = new MlScoringClient(httpClient);
 
-        var anomalies = await AuditorAgent.CheckForAnomaliesViaModelAsync(AdminConnectionString, scoringClient);
+        var anomalies = await AuditorAgent.CheckForAnomaliesViaModelAsync(LiveTestDb.AdminConnectionString, scoringClient);
 
         foreach (var anomaly in anomalies)
             Assert.Equal("ZScore", anomaly.TriggerSource);

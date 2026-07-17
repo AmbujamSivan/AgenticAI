@@ -14,11 +14,6 @@ namespace AeroMindIQ.Tests;
 [Trait("Category", "Live")]
 public class FetcherAgentLiveTests
 {
-    private const string AdminConnectionString =
-        "Host=localhost;Port=5432;Database=aeromindiq;Username=aeromind_admin;Password=aeromind_admin_pw";
-    private const string ReadOnlyConnectionString =
-        "Host=localhost;Port=5432;Database=aeromindiq;Username=aeromind_reader;Password=aeromind_reader_pw";
-
     [Fact]
     public async Task InvestigateAsync_RealClaude_ExecutesAtLeastOneQueryAsync()
     {
@@ -30,13 +25,13 @@ public class FetcherAgentLiveTests
         }
 
         var providerConfig = new LlmProviderConfig("Claude", apiKey, null, "claude-sonnet-5", "claude-sonnet-5", "claude-sonnet-5", "claude-sonnet-5");
-        var schemaDescription = await SchemaReader.DescribeSchemaAsync(AdminConnectionString);
+        var schemaDescription = await SchemaReader.DescribeSchemaAsync(LiveTestDb.AdminConnectionString);
 
         var reviewerChat = LlmKernelFactory.CreateChatCompletionService(providerConfig, providerConfig.ReviewerModel);
         var reviewer = new ReviewerAgent(reviewerChat, providerConfig.ReviewerModel);
 
         var fetcherChat = LlmKernelFactory.CreateChatCompletionService(providerConfig, providerConfig.FetcherModel);
-        var fetcher = new FetcherAgent(fetcherChat, providerConfig.FetcherModel, ReadOnlyConnectionString, schemaDescription, reviewer);
+        var fetcher = new FetcherAgent(fetcherChat, providerConfig.FetcherModel, LiveTestDb.ReadOnlyConnectionString, schemaDescription, reviewer);
 
         var anomaly = new AnomalyContext(
             LineId: 2,

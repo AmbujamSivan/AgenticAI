@@ -1,10 +1,8 @@
-#pragma warning disable SKEXP0070 // Gemini connector is experimental
 #pragma warning disable SKEXP0001 // Agent framework abstractions are experimental
 
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Agents;
 using Microsoft.SemanticKernel.ChatCompletion;
-using Microsoft.SemanticKernel.Connectors.Google;
 
 namespace AeroMindIQ.Agents;
 
@@ -16,18 +14,16 @@ public sealed record ReporterResult(string ReportMarkdown, IReadOnlyList<UsageSa
 /// instructed to cite only values present in the supplied data. The LLM-as-judge
 /// groundedness check (GroundednessJudge) runs afterward, as a separate agent.
 /// </summary>
-public sealed class ReporterAgent(string geminiApiKey, string geminiModelId)
+public sealed class ReporterAgent(LlmProviderConfig providerConfig)
 {
     private const string AgentName = "Reporter";
 
     public Task<ReporterResult> DraftReportAsync(AnomalyContext anomaly, string fetcherFindings) =>
-        GeminiRetryPolicy.ExecuteAsync(() => DraftReportOnceAsync(anomaly, fetcherFindings), AgentName);
+        LlmRetryPolicy.ExecuteAsync(() => DraftReportOnceAsync(anomaly, fetcherFindings), AgentName);
 
     private async Task<ReporterResult> DraftReportOnceAsync(AnomalyContext anomaly, string fetcherFindings)
     {
-        var builder = Kernel.CreateBuilder();
-        builder.AddGoogleAIGeminiChatCompletion(modelId: geminiModelId, apiKey: geminiApiKey);
-        var kernel = builder.Build();
+        var kernel = LlmKernelFactory.CreateKernel(providerConfig, providerConfig.ReporterModel);
 
         var agent = new ChatCompletionAgent
         {
@@ -68,7 +64,7 @@ public sealed class ReporterAgent(string geminiApiKey, string geminiModelId)
             var message = response.Message;
             reportParts.Add(message.Content ?? string.Empty);
 
-            var sample = UsageExtractor.Extract(AgentName, message);
+            var sample = UsageExtractor.Extract(AgentName, providerConfig.ReporterModel, message);
             if (sample is not null)
                 usage.Add(sample);
         }

@@ -1,10 +1,8 @@
-#pragma warning disable SKEXP0070 // Gemini connector is experimental
 #pragma warning disable SKEXP0001 // Agent framework abstractions are experimental
 
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Agents;
 using Microsoft.SemanticKernel.ChatCompletion;
-using Microsoft.SemanticKernel.Connectors.Google;
 
 namespace AeroMindIQ.Agents;
 
@@ -17,18 +15,16 @@ public sealed record ReviewVerdict(bool Approved, string Feedback, UsageSample? 
 /// rather than as a separate pipeline stage, so a rejection reuses the same retry path
 /// the Fetcher already uses for SqlGuardException.
 /// </summary>
-public sealed class ReviewerAgent(string geminiApiKey, string geminiModelId)
+public sealed class ReviewerAgent(LlmProviderConfig providerConfig)
 {
     private const string AgentName = "Reviewer";
 
     public Task<ReviewVerdict> ReviewAsync(string sql, string schemaDescription, AnomalyContext anomaly) =>
-        GeminiRetryPolicy.ExecuteAsync(() => ReviewOnceAsync(sql, schemaDescription, anomaly), AgentName);
+        LlmRetryPolicy.ExecuteAsync(() => ReviewOnceAsync(sql, schemaDescription, anomaly), AgentName);
 
     private async Task<ReviewVerdict> ReviewOnceAsync(string sql, string schemaDescription, AnomalyContext anomaly)
     {
-        var builder = Kernel.CreateBuilder();
-        builder.AddGoogleAIGeminiChatCompletion(modelId: geminiModelId, apiKey: geminiApiKey);
-        var kernel = builder.Build();
+        var kernel = LlmKernelFactory.CreateKernel(providerConfig, providerConfig.ReviewerModel);
 
         var agent = new ChatCompletionAgent
         {
@@ -68,7 +64,7 @@ public sealed class ReviewerAgent(string geminiApiKey, string geminiModelId)
         await foreach (var response in agent.InvokeAsync(new ChatMessageContent(AuthorRole.User, prompt), thread))
         {
             lastMessage = response.Message;
-            usage = UsageExtractor.Extract(AgentName, response.Message) ?? usage;
+            usage = UsageExtractor.Extract(AgentName, providerConfig.ReviewerModel, response.Message) ?? usage;
         }
 
         var content = lastMessage?.Content?.Trim() ?? string.Empty;

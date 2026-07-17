@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using OpenTelemetry;
+using OpenTelemetry.Exporter;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
@@ -30,7 +31,11 @@ public static class Telemetry
 
         // Langfuse's OTEL endpoint authenticates via HTTP Basic Auth using the
         // project's public/secret key pair, base64-encoded exactly like any other
-        // Basic Auth header.
+        // Basic Auth header. It also requires an explicit ingestion-version header, and
+        // only speaks OTLP over HTTP (protobuf/JSON) — not gRPC, which is what the .NET
+        // OTLP exporter defaults to. Both of those were missing initially and caused
+        // exports to silently succeed client-side while Langfuse never logged or stored
+        // anything — confirmed by inspecting ClickHouse directly during debugging.
         var authHeader = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{publicKey}:{secretKey}"));
 
         return Sdk.CreateTracerProviderBuilder()
@@ -40,7 +45,8 @@ public static class Telemetry
             .AddOtlpExporter(options =>
             {
                 options.Endpoint = new Uri(otlpEndpoint);
-                options.Headers = $"Authorization=Basic {authHeader}";
+                options.Protocol = OtlpExportProtocol.HttpProtobuf;
+                options.Headers = $"Authorization=Basic {authHeader},x-langfuse-ingestion-version=4";
             })
             .Build();
     }

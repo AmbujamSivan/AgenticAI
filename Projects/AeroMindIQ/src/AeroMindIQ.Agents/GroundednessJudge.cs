@@ -1,10 +1,8 @@
-#pragma warning disable SKEXP0070 // Gemini connector is experimental
 #pragma warning disable SKEXP0001 // Agent framework abstractions are experimental
 
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Agents;
 using Microsoft.SemanticKernel.ChatCompletion;
-using Microsoft.SemanticKernel.Connectors.Google;
 
 namespace AeroMindIQ.Agents;
 
@@ -31,18 +29,16 @@ public sealed record JudgeVerdict(bool Grounded, IReadOnlyList<string> Unsupport
 /// async eval queue. No labeled eval set calibrates the judge itself yet; that's
 /// surfaced explicitly in the output rather than silently treated as validated.
 /// </summary>
-public sealed class GroundednessJudge(string geminiApiKey, string geminiModelId)
+public sealed class GroundednessJudge(LlmProviderConfig providerConfig)
 {
     private const string AgentName = "Judge";
 
     public Task<JudgeVerdict> EvaluateAsync(string reportMarkdown, string fetcherFindings) =>
-        GeminiRetryPolicy.ExecuteAsync(() => EvaluateOnceAsync(reportMarkdown, fetcherFindings), AgentName);
+        LlmRetryPolicy.ExecuteAsync(() => EvaluateOnceAsync(reportMarkdown, fetcherFindings), AgentName);
 
     private async Task<JudgeVerdict> EvaluateOnceAsync(string reportMarkdown, string fetcherFindings)
     {
-        var builder = Kernel.CreateBuilder();
-        builder.AddGoogleAIGeminiChatCompletion(modelId: geminiModelId, apiKey: geminiApiKey);
-        var kernel = builder.Build();
+        var kernel = LlmKernelFactory.CreateKernel(providerConfig, providerConfig.JudgeModel);
 
         var agent = new ChatCompletionAgent
         {
@@ -78,7 +74,7 @@ public sealed class GroundednessJudge(string geminiApiKey, string geminiModelId)
         await foreach (var response in agent.InvokeAsync(new ChatMessageContent(AuthorRole.User, prompt), thread))
         {
             lastMessage = response.Message;
-            usage = UsageExtractor.Extract(AgentName, response.Message) ?? usage;
+            usage = UsageExtractor.Extract(AgentName, providerConfig.JudgeModel, response.Message) ?? usage;
         }
 
         var content = lastMessage?.Content?.Trim() ?? string.Empty;

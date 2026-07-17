@@ -1,6 +1,18 @@
 {
-  "Gemini": {
-    "ApiKey": "PASTE_YOUR_GEMINI_API_KEY_HERE"
+  "LlmProvider": "Claude",
+  "Providers": {
+    "Gemini": {
+      "ApiKey": "PASTE_YOUR_GEMINI_API_KEY_HERE"
+    },
+    "Claude": {
+      "ApiKey": "PASTE_YOUR_ANTHROPIC_API_KEY_HERE"
+    },
+    "OpenAI": {
+      "ApiKey": "PASTE_YOUR_OPENAI_API_KEY_HERE"
+    },
+    "OpenAICompatible": {
+      "ApiKey": "PASTE_YOUR_DEEPSEEK_OR_OTHER_API_KEY_HERE"
+    }
   },
   "Langfuse": {
     "PublicKey": "PASTE_YOUR_LANGFUSE_PUBLIC_KEY_HERE",

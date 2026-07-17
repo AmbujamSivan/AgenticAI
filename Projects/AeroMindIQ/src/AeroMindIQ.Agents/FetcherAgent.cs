@@ -1,10 +1,8 @@
-#pragma warning disable SKEXP0070 // Gemini connector is experimental
 #pragma warning disable SKEXP0001 // Agent framework abstractions are experimental
 
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Agents;
 using Microsoft.SemanticKernel.ChatCompletion;
-using Microsoft.SemanticKernel.Connectors.Google;
 
 namespace AeroMindIQ.Agents;
 
@@ -21,8 +19,7 @@ public sealed record FetcherResult(string QueryFindings, IReadOnlyList<UsageSamp
 /// investigation, not the FetcherAgent's whole lifetime.
 /// </summary>
 public sealed class FetcherAgent(
-    string geminiApiKey,
-    string geminiModelId,
+    LlmProviderConfig providerConfig,
     string readOnlyConnectionString,
     string schemaDescription,
     ReviewerAgent reviewer)
@@ -30,13 +27,11 @@ public sealed class FetcherAgent(
     private const string AgentName = "Fetcher";
 
     public Task<FetcherResult> InvestigateAsync(AnomalyContext anomaly) =>
-        GeminiRetryPolicy.ExecuteAsync(() => InvestigateOnceAsync(anomaly), AgentName);
+        LlmRetryPolicy.ExecuteAsync(() => InvestigateOnceAsync(anomaly), AgentName);
 
     private async Task<FetcherResult> InvestigateOnceAsync(AnomalyContext anomaly)
     {
-        var builder = Kernel.CreateBuilder();
-        builder.AddGoogleAIGeminiChatCompletion(modelId: geminiModelId, apiKey: geminiApiKey);
-        var kernel = builder.Build();
+        var kernel = LlmKernelFactory.CreateKernel(providerConfig, providerConfig.FetcherModel);
 
         var databasePlugin = new DatabasePlugin(readOnlyConnectionString, reviewer, anomaly, schemaDescription);
         kernel.Plugins.AddFromObject(databasePlugin, "Database");
@@ -61,7 +56,7 @@ public sealed class FetcherAgent(
                 found in plain text — do not draw conclusions, that is another agent's job.
                 """,
             Kernel = kernel,
-            Arguments = new KernelArguments(new GeminiPromptExecutionSettings
+            Arguments = new KernelArguments(new PromptExecutionSettings
             {
                 FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
             })
@@ -78,7 +73,7 @@ public sealed class FetcherAgent(
             var message = response.Message;
             findings.Add(message.Content ?? string.Empty);
 
-            var sample = UsageExtractor.Extract(AgentName, message);
+            var sample = UsageExtractor.Extract(AgentName, providerConfig.FetcherModel, message);
             if (sample is not null)
                 usage.Add(sample);
         }

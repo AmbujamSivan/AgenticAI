@@ -30,19 +30,33 @@ internal class Program
             var readOnlyConnectionString = config.GetConnectionString("ReadOnlyConnection")
                 ?? throw new InvalidOperationException("Missing ConnectionStrings:ReadOnlyConnection in configuration.");
 
-            var geminiApiKey = config["Gemini:ApiKey"];
-            if (string.IsNullOrWhiteSpace(geminiApiKey))
+            var providerName = config["LlmProvider"];
+            if (string.IsNullOrWhiteSpace(providerName))
             {
-                System.Console.Error.WriteLine(
-                    "Missing Gemini:ApiKey. Set it in src/AeroMindIQ.Console/appsettings.Development.json " +
-                    "(gitignored) or the GEMINI__APIKEY environment variable.");
+                System.Console.Error.WriteLine("Missing LlmProvider in configuration (expected Gemini, Claude, OpenAI, or OpenAICompatible).");
                 return 1;
             }
 
-            var fetcherModel = config["Gemini:FetcherModel"] ?? "gemini-2.5-flash";
-            var reporterModel = config["Gemini:ReporterModel"] ?? "gemini-2.5-flash";
-            var reviewerModel = config["Gemini:ReviewerModel"] ?? "gemini-2.5-flash";
-            var judgeModel = config["Gemini:JudgeModel"] ?? "gemini-2.5-flash";
+            var providerSection = config.GetSection($"Providers:{providerName}");
+            var providerApiKey = providerSection["ApiKey"];
+            if (string.IsNullOrWhiteSpace(providerApiKey))
+            {
+                System.Console.Error.WriteLine(
+                    $"Missing Providers:{providerName}:ApiKey. Set it in src/AeroMindIQ.Console/appsettings.Development.json " +
+                    "(gitignored) or the corresponding environment variable.");
+                return 1;
+            }
+
+            var providerConfig = new LlmProviderConfig(
+                Provider: providerName,
+                ApiKey: providerApiKey,
+                BaseUrl: providerSection["BaseUrl"],
+                FetcherModel: providerSection["FetcherModel"] ?? throw new InvalidOperationException($"Missing Providers:{providerName}:FetcherModel"),
+                ReporterModel: providerSection["ReporterModel"] ?? throw new InvalidOperationException($"Missing Providers:{providerName}:ReporterModel"),
+                ReviewerModel: providerSection["ReviewerModel"] ?? throw new InvalidOperationException($"Missing Providers:{providerName}:ReviewerModel"),
+                JudgeModel: providerSection["JudgeModel"] ?? throw new InvalidOperationException($"Missing Providers:{providerName}:JudgeModel"));
+
+            System.Console.WriteLine($"LLM provider: {providerName}");
 
             var mlScoringBaseUrl = config["MlScoringService:BaseUrl"] ?? "http://localhost:8500";
             using var mlHttpClient = new HttpClient { BaseAddress = new Uri(mlScoringBaseUrl), Timeout = TimeSpan.FromSeconds(10) };
@@ -71,8 +85,8 @@ internal class Program
 
             System.Console.WriteLine("Agent B (Fetcher): gathering supporting evidence via safe SQL (reviewed by Agent Reviewer)...");
             var schemaDescription = await SchemaReader.DescribeSchemaAsync(adminConnectionString);
-            var reviewer = new ReviewerAgent(geminiApiKey, reviewerModel);
-            var fetcher = new FetcherAgent(geminiApiKey, fetcherModel, readOnlyConnectionString, schemaDescription, reviewer);
+            var reviewer = new ReviewerAgent(providerConfig);
+            var fetcher = new FetcherAgent(providerConfig, readOnlyConnectionString, schemaDescription, reviewer);
             var fetcherResult = await fetcher.InvestigateAsync(anomaly);
             foreach (var sample in fetcherResult.Usage)
                 usageTracker.Record(sample);
@@ -82,13 +96,13 @@ internal class Program
             System.Console.WriteLine();
 
             System.Console.WriteLine("Agent C (Reporter): drafting root-cause report...");
-            var reporter = new ReporterAgent(geminiApiKey, reporterModel);
+            var reporter = new ReporterAgent(providerConfig);
             var reporterResult = await reporter.DraftReportAsync(anomaly, fetcherResult.QueryFindings);
             foreach (var sample in reporterResult.Usage)
                 usageTracker.Record(sample);
 
             System.Console.WriteLine("Agent D (Judge): grading the report's groundedness...");
-            var judge = new GroundednessJudge(geminiApiKey, judgeModel);
+            var judge = new GroundednessJudge(providerConfig);
             var judgeResult = await judge.EvaluateAsync(reporterResult.ReportMarkdown, fetcherResult.QueryFindings);
             if (judgeResult.Usage is not null)
                 usageTracker.Record(judgeResult.Usage);

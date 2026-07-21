@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RCA Engine &#x2014; Agentic Failure Triage Demo</title>
+</head>
+<body>
+<style>
+  :root {
+    --ground: #0C1118;
+    --panel: #131B26;
+    --panel-2: #0F161F;
+    --line: #223041;
+    --text: #D8E2EC;
+    --muted: #8194A8;
+    --faint: #5A6B7E;
+    --accent: #64C7D0;
+    --accent-dim: #3E7E86;
+    --crit: #E4604F;
+    --warn: #DFA23E;
+    --ok: #57A971;
+    --mono: "SF Mono", "Menlo", "Cascadia Code", "Consolas", ui-monospace, monospace;
+    --sans: "Avenir Next", "Avenir", system-ui, "Segoe UI", sans-serif;
+  }
+  html { background: var(--ground); }
+  body {
+    background: var(--ground);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.55;
+    margin: 0;
+  }
+  .wrap { max-width: 1020px; margin: 0 auto; padding: 0 24px 96px; }
+
+  /* ---------- header ---------- */
+  .topbar {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+    padding: 20px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap;
+  }
+  .wordmark { font-family: var(--mono); font-size: 15px; letter-spacing: .08em; color: var(--text); }
+  .wordmark .dot { color: var(--accent); }
+  .topbar a { color: var(--muted); font-family: var(--mono); font-size: 12.5px; text-decoration: none; border-bottom: 1px dotted var(--faint); }
+  .topbar a:hover, .topbar a:focus-visible { color: var(--accent); border-color: var(--accent); outline: none; }
+
+  .hero { padding: 56px 0 40px; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11.5px; letter-spacing: .22em; text-transform: uppercase;
+    color: var(--accent); margin: 0 0 14px;
+  }
+  h1 {
+    font-family: var(--mono); font-weight: 600; font-size: clamp(26px, 4.4vw, 40px);
+    line-height: 1.18; letter-spacing: -.01em; margin: 0 0 18px; text-wrap: balance;
+  }
+  .lede { max-width: 62ch; color: var(--muted); font-size: 17px; margin: 0; }
+  .lede strong { color: var(--text); font-weight: 600; }
+
+  .stats { display: flex; gap: 28px; flex-wrap: wrap; margin-top: 32px; }
+  .stat { font-family: var(--mono); }
+  .stat b { display: block; font-size: 19px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+  .stat span { font-size: 11.5px; color: var(--faint); letter-spacing: .1em; text-transform: uppercase; }
+
+  /* ---------- scenario switcher ---------- */
+  .scenarios { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 8px 0 24px; }
+  @media (max-width: 720px) { .scenarios { grid-template-columns: 1fr; } }
+  .scenario-btn {
+    text-align: left; cursor: pointer; font-family: var(--sans);
+    background: var(--panel-2); color: var(--muted);
+    border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px;
+  }
+  .scenario-btn .sev { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; }
+  .scenario-btn h3 { margin: 0 0 4px; font-size: 14.5px; font-weight: 600; color: var(--text); display: flex; align-items: center; }
+  .scenario-btn p { margin: 0; font-family: var(--mono); font-size: 11.5px; color: var(--faint); }
+  .scenario-btn[aria-pressed="true"] { border-color: var(--accent-dim); background: var(--panel); box-shadow: inset 0 0 0 1px var(--accent-dim); }
+  .scenario-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- console ---------- */
+  .console {
+    border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--panel);
+  }
+  .console-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 10px 16px; background: var(--panel-2); border-bottom: 1px solid var(--line);
+    font-family: var(--mono); font-size: 12px; color: var(--muted); flex-wrap: wrap;
+  }
+  .console-head .node { color: var(--text); }
+  .replay-btn {
+    font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; cursor: pointer;
+    color: var(--accent); background: none; border: 1px solid var(--accent-dim); border-radius: 4px; padding: 4px 12px;
+  }
+  .replay-btn:hover, .replay-btn:focus-visible { background: rgba(100,199,208,.08); outline: none; }
+  .transcript { padding: 18px 20px 22px; font-family: var(--mono); font-size: 13px; line-height: 1.6; overflow-x: auto; }
+  .step { margin: 0 0 14px; opacity: 0; transform: translateY(4px); transition: opacity .35s ease, transform .35s ease; }
+  .step.shown { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) { .step { transition: none; transform: none; } }
+  .call { color: var(--accent); white-space: pre-wrap; }
+  .call::before { content: "\25B8  "; color: var(--accent-dim); }
+  .result { color: var(--muted); white-space: pre-wrap; margin: 3px 0 0 18px; border-left: 2px solid var(--line); padding-left: 12px; }
+  .result .hl-crit { color: var(--crit); }
+  .result .hl-warn { color: var(--warn); }
+  .verdict-line { color: var(--text); white-space: pre-wrap; }
+  .verdict-line::before { content: "\25A0  "; color: var(--ok); }
+
+  /* ---------- report ---------- */
+  .report { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); margin-top: 24px; overflow: hidden; }
+  .report-head {
+    padding: 16px 20px; border-bottom: 1px solid var(--line); background: var(--panel-2);
+    display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  .report-head h2 { margin: 0; font-family: var(--mono); font-size: 14px; font-weight: 600; letter-spacing: .04em; }
+  .chip {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+    padding: 3px 10px; border-radius: 999px; border: 1px solid;
+  }
+  .chip.cat { color: var(--crit); border-color: var(--crit); background: rgba(228,96,79,.08); }
+  .report-grid { display: grid; grid-template-columns: 1fr 1fr; }
+  @media (max-width: 720px) { .report-grid { grid-template-columns: 1fr; } }
+  .report-cell { padding: 18px 20px; border-top: 1px solid var(--line); }
+  .report-grid .report-cell:first-child { border-top: none; }
+  @media (min-width: 721px) {
+    .report-grid .report-cell:nth-child(2) { border-top: none; }
+    .report-grid .report-cell:nth-child(odd) { border-right: 1px solid var(--line); }
+  }
+  .report-cell h4 {
+    margin: 0 0 8px; font-family: var(--mono); font-size: 11px; font-weight: 600;
+    letter-spacing: .18em; text-transform: uppercase; color: var(--faint);
+  }
+  .report-cell p { margin: 0; font-size: 14.5px; color: var(--text); max-width: 58ch; }
+  .report-cell ul { margin: 0; padding-left: 18px; font-size: 14px; color: var(--text); }
+  .report-cell li { margin-bottom: 6px; }
+  .report-cell li:last-child { margin-bottom: 0; }
+  .ev { font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
+  .ev b { color: var(--accent); font-weight: 500; }
+  .kv { font-family: var(--mono); font-size: 13px; color: var(--muted); display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; }
+  .kv dt { color: var(--faint); }
+  .kv dd { margin: 0; color: var(--text); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+
+  /* ---------- sections ---------- */
+  section { margin-top: 72px; }
+  h2.sec {
+    font-family: var(--mono); font-size: 12px; font-weight: 600; letter-spacing: .22em;
+    text-transform: uppercase; color: var(--accent); margin: 0 0 24px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  h2.sec::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+  .phases { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  @media (max-width: 760px) { .phases { grid-template-columns: 1fr; } }
+  .phase { border: 1px solid var(--line); border-radius: 8px; padding: 20px; background: var(--panel-2); }
+  .phase .num { font-family: var(--mono); font-size: 12px; color: var(--accent); letter-spacing: .1em; }
+  .phase h3 { margin: 10px 0 8px; font-size: 16px; font-weight: 600; }
+  .phase p { margin: 0; font-size: 14px; color: var(--muted); }
+  .phase code { font-family: var(--mono); font-size: 12px; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+
+  .arch { border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); padding: 26px; overflow-x: auto; }
+  .arch-flow { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: stretch; gap: 0; min-width: 640px; }
+  .arch-box { border: 1px solid var(--line); border-radius: 6px; background: var(--panel); padding: 14px 16px; }
+  .arch-box h4 { margin: 0 0 6px; font-family: var(--mono); font-size: 12.5px; font-weight: 600; color: var(--text); }
+  .arch-box p { margin: 0; font-size: 12.5px; color: var(--muted); }
+  .arch-arrow { display: flex; align-items: center; padding: 0 14px; color: var(--accent-dim); font-family: var(--mono); font-size: 14px; }
+  .arch-lower { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 12px; min-width: 640px; }
+  .arch-note { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); margin: 18px 0 8px; }
+
+  .runblock { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 20px 22px; overflow-x: auto; }
+  .runblock pre { margin: 0; font-family: var(--mono); font-size: 13px; line-height: 1.9; color: var(--text); }
+  .runblock .c { color: var(--faint); }
+  .runblock .p { color: var(--accent); }
+
+  footer { margin-top: 80px; border-top: 1px solid var(--line); padding-top: 20px; font-family: var(--mono); font-size: 12px; color: var(--faint); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  footer a { color: var(--muted); text-decoration: none; border-bottom: 1px dotted var(--faint); }
+  footer a:hover, footer a:focus-visible { color: var(--accent); border-color: var(--accent); outline: none; }
+</style>
+
+<div class="wrap">
+  <div class="topbar">
+    <span class="wordmark">rca_engine<span class="dot">://</span>triage-console</span>
+    <a href="https://github.com/AmbujamSivan/AgenticAI/tree/main/Projects/RCA_Engine">github.com/AmbujamSivan/AgenticAI &#xB7; Projects/RCA_Engine</a>
+  </div>
+
+  <div class="hero">
+    <p class="eyebrow">Agentic Root-Cause Analysis &#xB7; .NET 9 + Semantic Kernel</p>
+    <h1>An autonomous agent that reads the logs so the on-call engineer doesn't have to.</h1>
+    <p class="lede">Given a raw diagnostic bundle &#x2014; <strong>Redfish BMC events, PCIe AER registers, kernel dmesg</strong> &#x2014; a local LLM plans tool calls against native C# parsers, isolates the failing subsystem, and files a structured RCA report. Below is a replay of real investigations run with <strong>llama3.2 on Ollama</strong>, a 2&nbsp;GB quantized model.</p>
+    <div class="stats">
+      <div class="stat"><b>3</b><span>log sources fused</span></div>
+      <div class="stat"><b>~17s</b><span>bundle &#x2192; verdict</span></div>
+      <div class="stat"><b>21</b><span>xunit tests</span></div>
+      <div class="stat"><b>100%</b><span>local &#x2014; no cloud calls</span></div>
+    </div>
+  </div>
+
+  <section style="margin-top: 24px;">
+    <h2 class="sec">Replayed investigation</h2>
+    <div class="scenarios" role="group" aria-label="Choose a failure scenario">
+      <button class="scenario-btn" data-s="memory" aria-pressed="true">
+        <h3><span class="sev" style="background: var(--warn)"></span>Memory CE storm</h3>
+        <p>INC-2026-071801 &#xB7; corrected-error flood on one DIMM</p>
+      </button>
+      <button class="scenario-btn" data-s="nvme" aria-pressed="false">
+        <h3><span class="sev" style="background: var(--crit)"></span>NVMe controller death</h3>
+        <p>INC-2026-071902 &#xB7; CSTS=0xffffffff, device removed</p>
+      </button>
+      <button class="scenario-btn" data-s="pcie" aria-pressed="false">
+        <h3><span class="sev" style="background: var(--warn)"></span>PCIe link degrade</h3>
+        <p>INC-2026-072003 &#xB7; GPU link downtrained 16GT/s &#x2192; 2.5GT/s</p>
+      </button>
+    </div>
+
+    <div class="console">
+      <div class="console-head">
+        <span>node <span class="node" id="node-label">AZ-EASTUS2-RACK14-NODE07</span></span>
+        <button class="replay-btn" id="replay">&#x21BB; replay</button>
+      </div>
+      <div class="transcript" id="transcript" aria-live="polite"></div>
+    </div>
+
+    <div class="report">
+      <div class="report-head">
+        <h2 id="report-title">report.md &#x2014; INC-2026-071801</h2>
+        <span class="chip cat" id="report-cat">MemorySubsystem</span>
+      </div>
+      <div class="report-grid" id="report-grid"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec">How the loop stays honest</h2>
+    <div class="phases">
+      <div class="phase">
+        <div class="num">PHASE 1 &#x2014; INVESTIGATE</div>
+        <h3>Tools first, opinions later</h3>
+        <p>The model starts with only the diagnostic tools &#x2014; summaries of dmesg fault classes, the BMC event log, and per-device AER register decodes. It cannot conclude anything it hasn't queried.</p>
+      </div>
+      <div class="phase">
+        <div class="num">PHASE 2 &#x2014; SUBMIT</div>
+        <h3>A verdict is a tool call</h3>
+        <p>Only after investigating is <code>submit_rca_report</code> exposed. The tool validates the submission &#x2014; empty root cause or unknown category gets <code>REJECTED</code> back in-context, forcing the model to retry with real arguments.</p>
+      </div>
+      <div class="phase">
+        <div class="num">FALLBACK</div>
+        <h3>Always ship a report</h3>
+        <p>A rule-based scorer runs the same evidence deterministically when no LLM is reachable (<code>--no-llm</code>) or the agent never submits. The pipeline degrades gracefully, never silently.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec">Architecture</h2>
+    <div class="arch">
+      <div class="arch-flow">
+        <div class="arch-box">
+          <h4>Raw diagnostic bundle</h4>
+          <p>redfish_events.json &#xB7; pcie_aer.txt &#xB7; dmesg.log</p>
+        </div>
+        <div class="arch-arrow">&#x2192;</div>
+        <div class="arch-box" style="border-color: var(--accent-dim);">
+          <h4>Agent orchestrator</h4>
+          <p>Semantic Kernel &#xB7; two-phase loop &#xB7; function router &#xB7; auto tool invocation</p>
+        </div>
+        <div class="arch-arrow">&#x2192;</div>
+        <div class="arch-box">
+          <h4>Structured RCA output</h4>
+          <p>report.json &#xB7; report.md &#xB7; category, component, evidence, actions, confidence</p>
+        </div>
+      </div>
+      <p class="arch-note">Native diagnostic tools (C#, unit-tested)</p>
+      <div class="arch-lower">
+        <div class="arch-box">
+          <h4>redfish.*</h4>
+          <p>DMTF LogEntry parser &#x2014; severity rollups, per-component event queries</p>
+        </div>
+        <div class="arch-box">
+          <h4>pcie.*</h4>
+          <p>AER status registers decoded to named spec bits; link downtrain detection</p>
+        </div>
+        <div class="arch-box">
+          <h4>dmesg.*</h4>
+          <p>Kernel log classified: EDAC CE/UE, MCE, NVMe, AER, I/O, thermal</p>
+        </div>
+      </div>
+      <p class="arch-note">LLM endpoint &#x2014; swappable via config</p>
+      <div class="arch-lower" style="grid-template-columns: 1fr;">
+        <div class="arch-box">
+          <h4>Ollama (default, local llama3.2) &#xB7; OpenAI &#xB7; Azure OpenAI</h4>
+          <p>One OpenAI-compatible connector covers all three; provider and model switch via appsettings.json, RCA_* environment variables, or CLI flags.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec">Run it</h2>
+    <div class="runblock">
+<pre><span class="c"># agentic triage with the local model (Ollama + llama3.2)</span>
+<span class="p">$</span> dotnet run --project src/RcaEngine -- samples/bundle-memory-ce-storm
+
+<span class="c"># deterministic-only mode &#x2014; no LLM required</span>
+<span class="p">$</span> dotnet run --project src/RcaEngine -- samples/bundle-nvme-controller-failure --no-llm
+
+<span class="c"># full stack in containers: Ollama + model pull + engine</span>
+<span class="p">$</span> docker compose up --build</pre>
+    </div>
+  </section>
+
+  <footer>
+    <span>C# &#xB7; .NET 9 &#xB7; Semantic Kernel 1.78 &#xB7; xUnit &#xB7; Docker</span>
+    <a href="https://github.com/AmbujamSivan/AgenticAI/tree/main/Projects/RCA_Engine">source &amp; sample bundles &#x2192;</a>
+  </footer>
+</div>
+
+<script>
+  const SCENARIOS = {
+    memory: {
+      node: "AZ-EASTUS2-RACK14-NODE07",
+      incident: "INC-2026-071801",
+      category: "MemorySubsystem",
+      steps: [
+        { call: "dmesg.get_dmesg_summary()",
+          result: "Total kernel log lines: 21\n  <span class='hl-warn'>MemoryCorrectedError: 15 lines over 1607s</span>\n  MachineCheck: 1 lines over 0s" },
+        { call: "redfish.get_redfish_event_summary()",
+          result: "Total Redfish events: 8 \u2014 Warning: 6, Critical: 1, OK: 1\n  <span class='hl-crit'>Memory.1.0.CorrectableECCErrorRateExceeded: 1</span> (components: /redfish/v1/Systems/1/Memory/DIMM_B0)\n  Memory.1.0.CorrectableECCError: 6 (components: \u2026/Memory/DIMM_B0)" },
+        { call: "pcie.list_pcie_devices()",
+          result: "0000:17:00.0 \u2014 ConnectX-6 NIC: link 16GT/s x16\n0000:3b:00.0 \u2014 PM9A3 NVMe: link 16GT/s x4\n0000:5e:00.0 \u2014 A100 GPU: link 16GT/s x16   (all AER registers clean)" },
+        { call: "report.submit_rca_report(category: \"MemorySubsystem\", \u2026)",
+          result: "RCA report submitted successfully. Investigation complete." },
+      ],
+      verdict: "verdict: MemorySubsystem / DIMM_B0 \u2014 corrected-ECC storm, predictive DIMM failure \u00B7 16.7s",
+      report: {
+        component: "DIMM_B0 (/redfish/v1/Systems/1/Memory)",
+        confidence: "90%", generatedBy: "llm-agent (llama3.2)", duration: "16.7s",
+        rootCause: "DRAM device degradation on DIMM_B0 producing a sustained corrected-ECC error rate. Errors are still being corrected \u2014 this is a predictive failure, not yet data loss.",
+        impact: "No corruption yet, but the correction interrupt storm steals CPU cycles from guest VMs, and the module is at elevated risk of an uncorrectable fault.",
+        evidence: [
+          "<b>[dmesg]</b> 15 EDAC CE lines on CPU_SrcID#0_MC#1_Chan#0_DIMM#0, accelerating over 27 min",
+          "<b>[redfish]</b> Critical: CorrectableECCErrorRateExceeded @ DIMM_B0",
+          "<b>[pcie-aer]</b> All links clean \u2014 fault isolated to the memory subsystem",
+        ],
+        actions: [
+          "Proactively replace DIMM_B0 at the next service window",
+          "Verify memory page offlining is active for the affected ranks",
+          "Migrate latency-sensitive workloads off the node until serviced",
+        ],
+      },
+    },
+    nvme: {
+      node: "AZ-WESTUS3-RACK08-NODE12",
+      incident: "INC-2026-071902",
+      category: "StorageNvme",
+      steps: [
+        { call: "dmesg.get_dmesg_summary()",
+          result: "Total kernel log lines: 21\n  <span class='hl-crit'>NvmeError: 9 lines</span>\n  IoError: 4 lines" },
+        { call: "dmesg.search_dmesg(pattern: \"nvme\")",
+          result: "nvme nvme0: I/O 566 QID 3 timeout, aborting\n<span class='hl-crit'>nvme nvme0: controller is down; will reset: CSTS=0xffffffff, PCI_STATUS=0x10</span>\nnvme nvme0: Removing after probe failure status: -19\nnvme nvme1: ping ok, controller healthy" },
+        { call: "pcie.decode_pcie_aer_registers(deviceAddress: \"0000:3b:00.0\")",
+          result: "Link: 16GT/s x4 (not downtrained)\nUncorrectable Error Status 0x00004000: <span class='hl-crit'>CompletionTimeout</span>" },
+        { call: "redfish.get_redfish_events(severity: \"Critical\")",
+          result: "<span class='hl-crit'>StorageDevice.1.0.ControllerDegraded</span> @ \u2026/Drives/Bay3\n<span class='hl-crit'>StorageDevice.1.0.DriveFailure</span> @ \u2026/Drives/Bay3 \u2014 device offline" },
+        { call: "report.submit_rca_report(category: \"StorageNvme\", \u2026)",
+          result: "RCA report submitted successfully. Investigation complete." },
+      ],
+      verdict: "verdict: StorageNvme / 0000:3b:00.0 Bay3 \u2014 drive controller failure, not the fabric \u00B7 18.2s",
+      report: {
+        component: "0000:3b:00.0 \u2014 Samsung PM9A3 NVMe (Bay3)",
+        confidence: "95%", generatedBy: "llm-agent (llama3.2)", duration: "18.2s",
+        rootCause: "The NVMe drive controller stopped responding (CSTS unreadable, reset failed, device removed). The PCIe link itself is healthy and the sibling drive in Bay4 is fine \u2014 this is the drive, not the fabric or host.",
+        impact: "All I/O to the affected namespace failed; workloads on that drive saw write errors and stalls until failover.",
+        evidence: [
+          "<b>[dmesg]</b> I/O timeouts \u2192 controller-down (CSTS=0xffffffff) \u2192 removal, status -19",
+          "<b>[pcie-aer]</b> CompletionTimeout on the endpoint; link at full 16GT/s x4",
+          "<b>[redfish]</b> ControllerDegraded + DriveFailure on Bay3; Bay4 healthy",
+        ],
+        actions: [
+          "Replace the NVMe drive in Bay3",
+          "Check drive firmware against the known-issue list before redeploying the model",
+          "Verify replication health and resync after replacement",
+        ],
+      },
+    },
+    pcie: {
+      node: "AZ-EASTUS2-RACK21-NODE03",
+      incident: "INC-2026-072003",
+      category: "PcieLink",
+      steps: [
+        { call: "pcie.list_pcie_devices()",
+          result: "0000:17:00.0 \u2014 ConnectX-6 NIC: link 16GT/s x16\n0000:3b:00.0 \u2014 PM9A3 NVMe: link 16GT/s x4\n<span class='hl-warn'>0000:5e:00.0 \u2014 A100 GPU: link 2.5GT/s x16 [DOWNTRAINED from 16GT/s x16] correctable count 18342</span>" },
+        { call: "pcie.decode_pcie_aer_registers(deviceAddress: \"0000:5e:00.0\")",
+          result: "Link capability: 16GT/s x16; current: <span class='hl-warn'>2.5GT/s x16 &lt;&lt; LINK DOWNTRAINED</span>\nCorrectable Error Status 0x000000C1: <span class='hl-warn'>ReceiverError, BadTLP, BadDLLP</span>\nCorrectable error count since boot: 18342" },
+        { call: "dmesg.search_dmesg(pattern: \"AER\")",
+          result: "19 lines match: pcieport 0000:5d:01.0: AER: PCIe Bus Error:\nseverity=Corrected, type=Physical Layer, (Receiver ID) \u2014 repeating" },
+        { call: "report.submit_rca_report(category: \"PcieLink\", \u2026)",
+          result: "RCA report submitted successfully. Investigation complete." },
+      ],
+      verdict: "verdict: PcieLink / 0000:5e:00.0 A100 \u2014 physical-layer degradation, reseat before replace \u00B7 17.4s",
+      report: {
+        component: "0000:5e:00.0 \u2014 NVIDIA A100 80GB (GPU1)",
+        confidence: "92%", generatedBy: "llm-agent (llama3.2)", duration: "17.4s",
+        rootCause: "Signal-integrity fault on the PCIe link to GPU1: a correctable-error storm (ReceiverError / BadTLP / BadDLLP) forced the link to retrain down to 2.5GT/s. The pattern points at the connector, riser, or trace \u2014 not the GPU's logic.",
+        impact: "GPU bandwidth cut ~6\u00D7 by the downtrained link; training-job throughput regression. Risk of escalation to uncorrectable link errors.",
+        evidence: [
+          "<b>[pcie-aer]</b> 18,342 correctable errors: ReceiverError, BadTLP, BadDLLP (0x000000C1)",
+          "<b>[pcie-aer]</b> Link downtrained 16GT/s \u2192 2.5GT/s at x16",
+          "<b>[dmesg]</b> Repeating corrected Physical-Layer AER reports from the upstream port",
+        ],
+        actions: [
+          "Reseat the GPU and riser at 0000:5e:00.0; inspect the connector",
+          "If errors persist, replace the riser/cable before swapping the endpoint",
+          "Compare correctable-error counters before/after service to confirm the fix",
+        ],
+      },
+    },
+  };
+
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const transcript = document.getElementById("transcript");
+  const grid = document.getElementById("report-grid");
+  let timers = [];
+
+  function renderReport(s) {
+    document.getElementById("report-title").textContent = "report.md \u2014 " + s.incident;
+    document.getElementById("report-cat").textContent = s.category;
+    grid.innerHTML = `
+      <div class="report-cell"><h4>Verdict</h4>
+        <dl class="kv">
+          <dt>component</dt><dd>${s.report.component}</dd>
+          <dt>confidence</dt><dd>${s.report.confidence}</dd>
+          <dt>generated by</dt><dd>${s.report.generatedBy}</dd>
+          <dt>triage time</dt><dd>${s.report.duration}</dd>
+        </dl>
+      </div>
+      <div class="report-cell"><h4>Root cause</h4><p>${s.report.rootCause}</p></div>
+      <div class="report-cell"><h4>Evidence</h4>
+        <ul>${s.report.evidence.map(e => `<li class="ev">${e}</li>`).join("")}</ul>
+      </div>
+      <div class="report-cell"><h4>Customer impact &amp; actions</h4>
+        <p style="margin-bottom:10px">${s.report.impact}</p>
+        <ul>${s.report.actions.map(a => `<li>${a}</li>`).join("")}</ul>
+      </div>`;
+  }
+
+  function play(key) {
+    const s = SCENARIOS[key];
+    timers.forEach(clearTimeout); timers = [];
+    document.getElementById("node-label").textContent = s.node;
+    transcript.innerHTML = "";
+    renderReport(s);
+
+    const nodes = [];
+    s.steps.forEach(step => {
+      const div = document.createElement("div");
+      div.className = "step";
+      div.innerHTML = `<div class="call">${step.call}</div><div class="result">${step.result}</div>`;
+      transcript.appendChild(div); nodes.push(div);
+    });
+    const v = document.createElement("div");
+    v.className = "step";
+    v.innerHTML = `<div class="verdict-line">${s.verdict}</div>`;
+    transcript.appendChild(v); nodes.push(v);
+
+    nodes.forEach((n, i) => {
+      if (reduced) { n.classList.add("shown"); }
+      else { timers.push(setTimeout(() => n.classList.add("shown"), 250 + i * 650)); }
+    });
+  }
+
+  let current = "memory";
+  document.querySelectorAll(".scenario-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      current = btn.dataset.s;
+      document.querySelectorAll(".scenario-btn").forEach(b =>
+        b.setAttribute("aria-pressed", String(b === btn)));
+      play(current);
+    });
+  });
+  document.getElementById("replay").addEventListener("click", () => play(current));
+  play(current);
+</script>
+
+</body>
+</html>

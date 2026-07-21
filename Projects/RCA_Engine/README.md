@@ -6,6 +6,9 @@ diagnostic bundle. A **Semantic Kernel** orchestrator lets an LLM (local quantiz
 Redfish BMC event logs, PCIe AER error registers, and the kernel log — isolate the failing
 subsystem, and emit a **structured RCA report** (JSON + Markdown).
 
+**Demo:** open [`docs/index.html`](docs/index.html) in a browser for an interactive replay of
+the agent's investigations across all three sample failure scenarios.
+
 ## Architecture
 
 ```

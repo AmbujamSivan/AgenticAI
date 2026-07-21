@@ -1,0 +1,30 @@
+{
+  "@odata.type": "#LogEntryCollection.LogEntryCollection",
+  "Name": "System Event Log",
+  "Members": [
+    {
+      "Id": "3310",
+      "Created": "2026-07-20T04:12:09Z",
+      "Severity": "Warning",
+      "MessageId": "PCIeDevice.1.0.DegradedLink",
+      "Message": "PCIe link operating below capability: negotiated 2.5GT/s, capable 16GT/s.",
+      "OriginOfCondition": "/redfish/v1/Systems/1/PCIeDevices/GPU1"
+    },
+    {
+      "Id": "3311",
+      "Created": "2026-07-20T04:55:44Z",
+      "Severity": "Warning",
+      "MessageId": "PCIeDevice.1.0.CorrectableErrorRateExceeded",
+      "Message": "Correctable PCIe error rate threshold exceeded on device.",
+      "OriginOfCondition": "/redfish/v1/Systems/1/PCIeDevices/GPU1"
+    },
+    {
+      "Id": "3312",
+      "Created": "2026-07-20T05:20:00Z",
+      "Severity": "OK",
+      "MessageId": "Thermal.1.0.TemperatureNormal",
+      "Message": "All thermal sensors within normal range.",
+      "OriginOfCondition": "/redfish/v1/Chassis/1/Thermal"
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "IncidentId": "INC-2026-071902",
+  "NodeId": "AZ-WESTUS3-RACK08-NODE12",
+  "Description": "Storage stack alerts: VM disk I/O failures on local NVMe",
+  "CollectedAt": "2026-07-19T11:05:00Z"
+}

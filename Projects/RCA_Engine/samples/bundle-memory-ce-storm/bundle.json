@@ -1,0 +1,6 @@
+{
+  "IncidentId": "INC-2026-071801",
+  "NodeId": "AZ-EASTUS2-RACK14-NODE07",
+  "Description": "Customer VM latency spikes; node flagged by fleet health monitor",
+  "CollectedAt": "2026-07-18T04:22:00Z"
+}

@@ -1,0 +1,116 @@
+# Agentic Root-Cause Analysis (RCA) & Failure Triage Engine
+
+An autonomous **C# / .NET 9** agent that triages server-node hardware failures from a raw
+diagnostic bundle. A **Semantic Kernel** orchestrator lets an LLM (local quantized model via
+**Ollama**, or OpenAI / Azure OpenAI) plan tool calls against native diagnostic parsers —
+Redfish BMC event logs, PCIe AER error registers, and the kernel log — isolate the failing
+subsystem, and emit a **structured RCA report** (JSON + Markdown).
+
+## Architecture
+
+```
+                  ┌─────────────────────────────────────────┐
+                  │          Raw Diagnostic Bundle          │
+                  │  (Redfish Event Logs, PCIe Regs, dmesg) │
+                  └────────────────────┬────────────────────┘
+                                       │
+                                       ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                           .NET 9 RCA Core Engine                         │
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────────┐  │
+│  │                 Agent Orchestrator (Semantic Kernel)               │  │
+│  └───────┬───────────────────────────▲────────────────────────┬───────┘  │
+│          │                           │                        │          │
+│          │ 1. Prompt + Context       │ 2. Tool Calls          │ 3. Exec  │
+│          ▼                           │                        ▼          │
+│  ┌───────────────┐           ┌───────┴────────┐       ┌───────────────┐  │
+│  │ Local/Cloud   │           │ Function       │       │ Diagnostic    │  │
+│  │ LLM Endpoint  │           │ Router         │       │ Native Tools  │  │
+│  │ (Ollama/OAI/  │           └────────────────┘       │ (Redfish,     │  │
+│  │  Azure OAI)   │                                    │  PCIe, dmesg) │  │
+│  └───────────────┘                                    └───────┬───────┘  │
+└───────────────────────────────────────────────────────────────┼──────────┘
+                                                                │
+                                                                ▼
+                                                ┌───────────────────────────┐
+                                                │   Structured RCA Output   │
+                                                │ (JSON / Markdown Report)  │
+                                                └───────────────────────────┘
+```
+
+### How the agent works
+
+1. **Phase 1 — Investigation.** The orchestrator gives the LLM only the diagnostic tools:
+   - `redfish.get_redfish_event_summary` / `get_redfish_events` — BMC system event log
+   - `pcie.list_pcie_devices` / `decode_pcie_aer_registers` — decodes AER status registers
+     into named error bits per the PCIe spec, flags downtrained links
+   - `dmesg.get_dmesg_summary` / `search_dmesg` — kernel log classified into fault classes
+     (EDAC corrected/uncorrected errors, MCE, NVMe errors, AER, I/O errors, thermal)
+2. **Phase 2 — Verdict.** The `report.submit_rca_report` tool is then exposed and the model
+   must submit a structured verdict (category, failing component, root cause, evidence,
+   actions, confidence). Incomplete or invalid submissions are **rejected by the tool**,
+   forcing the model to retry — this keeps small quantized models honest.
+3. **Fallback.** A rule-based `DeterministicTriage` scorer runs when no LLM is reachable
+   (`--no-llm`) or the agent fails to submit, so the pipeline always produces a report.
+
+## Prerequisites
+
+- .NET 9 SDK
+- [Ollama](https://ollama.com) with a tool-calling model: `ollama pull llama3.2`
+  (or configure OpenAI / Azure OpenAI in `src/RcaEngine/appsettings.json`)
+
+## Run
+
+```bash
+# Agentic triage with the local model (default: Ollama + llama3.2)
+dotnet run --project src/RcaEngine -- samples/bundle-memory-ce-storm
+
+# Deterministic-only mode (no LLM needed)
+dotnet run --project src/RcaEngine -- samples/bundle-nvme-controller-failure --no-llm
+
+# Override provider/model
+dotnet run --project src/RcaEngine -- samples/bundle-pcie-link-degrade --provider Ollama --model llama3.2
+```
+
+Reports land in `<bundle-dir>/rca_output/report.{json,md}` (override with `--output`).
+
+Configuration can also come from environment variables with the `RCA_` prefix, e.g.
+`RCA_Llm__Ollama__Endpoint=http://ollama:11434`.
+
+## Sample scenarios
+
+| Bundle | Fault signature | Expected verdict |
+|---|---|---|
+| `bundle-memory-ce-storm` | Sustained EDAC corrected-error storm + BMC ECC-rate-exceeded event, clean PCIe | `MemorySubsystem` — degrading DIMM (predictive failure) |
+| `bundle-nvme-controller-failure` | NVMe I/O timeouts → controller-down (`CSTS=0xffffffff`) → device removal, drive health events, AER CompletionTimeout | `StorageNvme` — dead drive controller, not the fabric |
+| `bundle-pcie-link-degrade` | Correctable AER storm (RxErr/BadTLP/BadDLLP), link downtrained 16GT/s → 2.5GT/s | `PcieLink` — physical-layer / connector fault, not the endpoint |
+
+## Tests
+
+```bash
+dotnet test
+```
+
+21 tests cover the AER bit decoder, dmesg classifier, Redfish parser, and end-to-end
+deterministic triage of all three sample bundles.
+
+## Docker
+
+```bash
+docker compose up --build   # starts Ollama, pulls llama3.2, runs the engine against a bundle
+```
+
+## Project layout
+
+```
+src/RcaEngine/
+  Agents/RcaOrchestrator.cs     # two-phase agent loop + fallback wiring
+  Llm/KernelFactory.cs          # Ollama (OpenAI-compat) / OpenAI / Azure OpenAI
+  Tools/                        # SK plugins: Redfish, PCIe, dmesg, report submission
+  Parsing/                      # testable native parsers (AER bit decode, dmesg classify)
+  Triage/DeterministicTriage.cs # rule-based scorer (offline mode / fallback)
+  Reporting/                    # Markdown renderer
+samples/                        # three synthetic diagnostic bundles
+tests/RcaEngine.Tests/          # xUnit suite
+```

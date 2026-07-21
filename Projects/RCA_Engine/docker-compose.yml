@@ -1,0 +1,38 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # One-shot model pull so llama3.2 is present before the engine runs.
+  ollama-init:
+    image: ollama/ollama:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["ollama", "pull", "llama3.2"]
+
+  rca-engine:
+    build: .
+    depends_on:
+      ollama-init:
+        condition: service_completed_successfully
+    environment:
+      RCA_Llm__Provider: Ollama
+      RCA_Llm__Ollama__Endpoint: http://ollama:11434
+      RCA_Llm__Ollama__ModelId: llama3.2
+    volumes:
+      - ./samples:/bundles
+    command: ["/bundles/bundle-memory-ce-storm"]
+
+volumes:
+  ollama-models:

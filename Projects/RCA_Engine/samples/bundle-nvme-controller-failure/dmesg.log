@@ -1,0 +1,21 @@
+[    0.000000] Linux version 6.8.0-azure (build@fleet) (gcc 13.2.0) #1 SMP
+[    0.398127] DMI: Microsoft Corporation Virtual Node Gen9.5/Open CloudServer, BIOS C2010.BS.3F41 02/11/2026
+[    3.204981] nvme nvme0: pci function 0000:3b:00.0
+[    3.205113] nvme nvme1: pci function 0000:3c:00.0
+[    3.512846] nvme nvme0: 32/0/0 default/read/poll queues
+[    3.560124] nvme nvme1: 32/0/0 default/read/poll queues
+[42881.117203] nvme nvme0: I/O 566 QID 3 timeout, aborting
+[42881.117980] nvme nvme0: I/O 567 QID 3 timeout, aborting
+[42881.118541] nvme nvme0: I/O 568 QID 3 timeout, aborting
+[42911.204773] nvme nvme0: I/O 566 QID 3 timeout, reset controller
+[42942.388105] nvme nvme0: I/O 12 QID 0 timeout, reset controller
+[43003.517922] nvme nvme0: Device not ready; aborting reset, CSTS=0x1
+[43003.518647] nvme nvme0: controller is down; will reset: CSTS=0xffffffff, PCI_STATUS=0x10
+[43034.629815] nvme nvme0: Device not ready; aborting reset, CSTS=0xffffffff
+[43034.630501] nvme nvme0: Removing after probe failure status: -19
+[43034.688213] blk_update_request: I/O error, dev nvme0n1, sector 812874240 op 0x1:(WRITE) flags 0x800 phys_seg 8 prio class 0
+[43034.689107] blk_update_request: I/O error, dev nvme0n1, sector 812874496 op 0x1:(WRITE) flags 0x800 phys_seg 8 prio class 0
+[43034.690034] Buffer I/O error on dev nvme0n1p1, logical block 101609024, lost async page write
+[43034.690871] Buffer I/O error on dev nvme0n1p1, logical block 101609025, lost async page write
+[43034.702318] EXT4-fs warning (device nvme0n1p1): ext4_end_bio:343: I/O error 10 writing to inode 5767299
+[43035.104296] nvme nvme1: ping ok, controller healthy

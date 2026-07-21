@@ -1,0 +1,6 @@
+{
+  "IncidentId": "INC-2026-072003",
+  "NodeId": "AZ-EASTUS2-RACK21-NODE03",
+  "Description": "GPU training job throughput regression; fabric health probe flagged link errors",
+  "CollectedAt": "2026-07-20T06:40:00Z"
+}

@@ -1,0 +1,21 @@
+[    0.000000] Linux version 6.8.0-azure (build@fleet) (gcc 13.2.0) #1 SMP
+[    0.412331] DMI: Microsoft Corporation Virtual Node Gen9.5/Open CloudServer, BIOS C2010.BS.3F41 02/11/2026
+[    2.115482] EDAC MC0: Giving out device to module skx_edac controller Skylake Socket#0 IMC#0
+[    2.115993] EDAC MC1: Giving out device to module skx_edac controller Skylake Socket#0 IMC#1
+[ 8811.204518] EDAC MC1: 1 CE memory read error on CPU_SrcID#0_MC#1_Chan#0_DIMM#0 (channel:0 slot:0 page:0x3a4bde offset:0x680 grain:32 syndrome:0x0)
+[ 9243.581102] EDAC MC1: 1 CE memory read error on CPU_SrcID#0_MC#1_Chan#0_DIMM#0 (channel:0 slot:0 page:0x3a4be1 offset:0x240 grain:32 syndrome:0x0)
+[ 9702.114859] EDAC MC1: 1 CE memory read error on CPU_SrcID#0_MC#1_Chan#0_DIMM#0 (channel:0 slot:0 page:0x3a4bde offset:0x680 grain:32 syndrome:0x0)
+[10087.938214] EDAC MC1: 1 CE memory read error on CPU_SrcID#0_MC#1_Chan#0_DIMM#0 (channel:0 slot:0 page:0x11f30a offset:0x9c0 grain:32 syndrome:0x0)
+[10221.472905] EDAC MC1: 1 CE memory read error on CPU_SrcID#0_MC#1_Chan#0_DIMM#0 (channel:0 slot:0 page:0x3a4bde offset:0x680 grain:32 syndrome:0x0)
+[10298.001547] EDAC MC1: 1 CE memory read error on CPU_SrcID#0_MC#1_Chan#0_DIMM#0 (channel:0 slot:0 page:0x3a4be4 offset:0x100 grain:32 syndrome:0x0)
+[10334.610092] EDAC MC1: 1 CE memory read error on CPU_SrcID#0_MC#1_Chan#0_DIMM#0 (channel:0 slot:0 page:0x3a4bde offset:0x680 grain:32 syndrome:0x0)
+[10361.229478] EDAC MC1: 1 CE memory read error on CPU_SrcID#0_MC#1_Chan#0_DIMM#0 (channel:0 slot:0 page:0x3a4bde offset:0x680 grain:32 syndrome:0x0)
+[10375.884320] EDAC MC1: 1 CE memory read error on CPU_SrcID#0_MC#1_Chan#0_DIMM#0 (channel:0 slot:0 page:0x22e19c offset:0x4c0 grain:32 syndrome:0x0)
+[10388.412675] EDAC MC1: 1 CE memory read error on CPU_SrcID#0_MC#1_Chan#0_DIMM#0 (channel:0 slot:0 page:0x3a4bde offset:0x680 grain:32 syndrome:0x0)
+[10395.107218] EDAC MC1: 1 CE memory read error on CPU_SrcID#0_MC#1_Chan#0_DIMM#0 (channel:0 slot:0 page:0x3a4bde offset:0x680 grain:32 syndrome:0x0)
+[10401.573864] EDAC MC1: 1 CE memory read error on CPU_SrcID#0_MC#1_Chan#0_DIMM#0 (channel:0 slot:0 page:0x3a4be1 offset:0x240 grain:32 syndrome:0x0)
+[10406.912450] mce: [Hardware Error]: Machine check events logged
+[10407.001128] EDAC MC1: 1 CE memory read error on CPU_SrcID#0_MC#1_Chan#0_DIMM#0 (channel:0 slot:0 page:0x3a4bde offset:0x680 grain:32 syndrome:0x0)
+[10411.239805] EDAC MC1: 1 CE memory read error on CPU_SrcID#0_MC#1_Chan#0_DIMM#0 (channel:0 slot:0 page:0x3a4bde offset:0x680 grain:32 syndrome:0x0)
+[10415.771442] perf: interrupt took too long (3102 > 3096), lowering kernel.perf_event_max_sample_rate
+[10418.336089] EDAC MC1: 1 CE memory read error on CPU_SrcID#0_MC#1_Chan#0_DIMM#0 (channel:0 slot:0 page:0x3a4bde offset:0x680 grain:32 syndrome:0x0)

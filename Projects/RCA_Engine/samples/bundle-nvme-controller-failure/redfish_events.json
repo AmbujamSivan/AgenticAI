@@ -1,0 +1,46 @@
+{
+  "@odata.type": "#LogEntryCollection.LogEntryCollection",
+  "Name": "System Event Log",
+  "Members": [
+    {
+      "Id": "2201",
+      "Created": "2026-07-19T09:47:12Z",
+      "Severity": "Warning",
+      "MessageId": "StorageDevice.1.0.DriveInWrongLocation",
+      "Message": "SMART critical warning: media/internal error flag set.",
+      "OriginOfCondition": "/redfish/v1/Systems/1/Storage/1/Drives/Bay3"
+    },
+    {
+      "Id": "2202",
+      "Created": "2026-07-19T10:02:37Z",
+      "Severity": "Warning",
+      "MessageId": "StorageDevice.1.0.DrivePredictiveFailure",
+      "Message": "Drive predictive failure threshold reached.",
+      "OriginOfCondition": "/redfish/v1/Systems/1/Storage/1/Drives/Bay3"
+    },
+    {
+      "Id": "2203",
+      "Created": "2026-07-19T10:31:50Z",
+      "Severity": "Critical",
+      "MessageId": "StorageDevice.1.0.ControllerDegraded",
+      "Message": "Storage controller no longer responding to management commands.",
+      "OriginOfCondition": "/redfish/v1/Systems/1/Storage/1/Drives/Bay3"
+    },
+    {
+      "Id": "2204",
+      "Created": "2026-07-19T10:32:14Z",
+      "Severity": "Critical",
+      "MessageId": "StorageDevice.1.0.DriveFailure",
+      "Message": "Drive failure detected; device offline.",
+      "OriginOfCondition": "/redfish/v1/Systems/1/Storage/1/Drives/Bay3"
+    },
+    {
+      "Id": "2205",
+      "Created": "2026-07-19T10:40:00Z",
+      "Severity": "OK",
+      "MessageId": "Thermal.1.0.TemperatureNormal",
+      "Message": "All thermal sensors within normal range.",
+      "OriginOfCondition": "/redfish/v1/Chassis/1/Thermal"
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "@odata.type": "#LogEntryCollection.LogEntryCollection",
+  "Name": "System Event Log",
+  "Members": [
+    {
+      "Id": "1041",
+      "Created": "2026-07-18T02:11:42Z",
+      "Severity": "Warning",
+      "MessageId": "Memory.1.0.CorrectableECCError",
+      "Message": "Correctable ECC error detected on memory device.",
+      "OriginOfCondition": "/redfish/v1/Systems/1/Memory/DIMM_B0"
+    },
+    {
+      "Id": "1042",
+      "Created": "2026-07-18T02:19:08Z",
+      "Severity": "Warning",
+      "MessageId": "Memory.1.0.CorrectableECCError",
+      "Message": "Correctable ECC error detected on memory device.",
+      "OriginOfCondition": "/redfish/v1/Systems/1/Memory/DIMM_B0"
+    },
+    {
+      "Id": "1043",
+      "Created": "2026-07-18T02:31:55Z",
+      "Severity": "Warning",
+      "MessageId": "Memory.1.0.CorrectableECCError",
+      "Message": "Correctable ECC error detected on memory device.",
+      "OriginOfCondition": "/redfish/v1/Systems/1/Memory/DIMM_B0"
+    },
+    {
+      "Id": "1044",
+      "Created": "2026-07-18T02:47:31Z",
+      "Severity": "Warning",
+      "MessageId": "Memory.1.0.CorrectableECCError",
+      "Message": "Correctable ECC error detected on memory device.",
+      "OriginOfCondition": "/redfish/v1/Systems/1/Memory/DIMM_B0"
+    },
+    {
+      "Id": "1045",
+      "Created": "2026-07-18T03:02:14Z",
+      "Severity": "Warning",
+      "MessageId": "Memory.1.0.CorrectableECCError",
+      "Message": "Correctable ECC error detected on memory device.",
+      "OriginOfCondition": "/redfish/v1/Systems/1/Memory/DIMM_B0"
+    },
+    {
+      "Id": "1046",
+      "Created": "2026-07-18T03:26:47Z",
+      "Severity": "Critical",
+      "MessageId": "Memory.1.0.CorrectableECCErrorRateExceeded",
+      "Message": "Correctable ECC error rate threshold exceeded on memory device.",
+      "OriginOfCondition": "/redfish/v1/Systems/1/Memory/DIMM_B0"
+    },
+    {
+      "Id": "1047",
+      "Created": "2026-07-18T03:41:03Z",
+      "Severity": "Warning",
+      "MessageId": "Memory.1.0.CorrectableECCError",
+      "Message": "Correctable ECC error detected on memory device.",
+      "OriginOfCondition": "/redfish/v1/Systems/1/Memory/DIMM_B0"
+    },
+    {
+      "Id": "1048",
+      "Created": "2026-07-18T03:58:29Z",
+      "Severity": "OK",
+      "MessageId": "Thermal.1.0.TemperatureNormal",
+      "Message": "Inlet temperature within normal range.",
+      "OriginOfCondition": "/redfish/v1/Chassis/1/Thermal"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+# PCIe AER register snapshot — collected by diagnostic bundle tool
+Device: 0000:17:00.0
+Description: Mellanox ConnectX-6 Dx 100GbE NIC
+LinkCapabilities: Speed 16GT/s, Width x16
+LinkStatus: Speed 16GT/s, Width x16
+AerCorrectableStatus: 0x00000000
+AerUncorrectableStatus: 0x00000000
+AerCorrectableCount: 0
+
+Device: 0000:3b:00.0
+Description: Samsung PM9A3 NVMe SSD Controller
+LinkCapabilities: Speed 16GT/s, Width x4
+LinkStatus: Speed 16GT/s, Width x4
+AerCorrectableStatus: 0x00000000
+AerUncorrectableStatus: 0x00000000
+AerCorrectableCount: 0
+
+Device: 0000:5e:00.0
+Description: NVIDIA A100 80GB PCIe Accelerator
+LinkCapabilities: Speed 16GT/s, Width x16
+LinkStatus: Speed 16GT/s, Width x16
+AerCorrectableStatus: 0x00000000
+AerUncorrectableStatus: 0x00000000
+AerCorrectableCount: 2

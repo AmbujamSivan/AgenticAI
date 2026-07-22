@@ -35,6 +35,20 @@ report (JSON + Markdown).
 * **Core Tech:** C# (.NET 9), Semantic Kernel, local quantized LLM via Ollama (llama3.2), xUnit, Docker Compose.
 * **[Explore Project 📂](./Projects/RCA_Engine)** | **[Interactive Demo 🖥️](./Projects/RCA_Engine/docs/index.html)**
 
+### 🖧 3. Redfish API Lab — BMC Client Toolkit + Mock Service
+A hands-on lab for the server management plane: a lightweight Python Redfish client
+library (shared across the monorepo) driven against the DMTF Redfish Interface Emulator,
+covering power actions, BIOS attributes, thermal/power telemetry, event logs, and BMC
+account management — no real hardware needed.
+* **Architecture:** Reusable client library in `Shared/`, spec-faithful mock BMC as the demo target.
+* **Core Tech:** Python, DMTF Redfish schema, requests-based session auth.
+* **[Explore Project 📂](./Projects/RedfishAPI)** | **[Library 📚](./Shared/redfish_toolkit)**
+
+---
+
+## 🧰 Shared Libraries
+* **[`Shared/redfish_toolkit`](./Shared/redfish_toolkit)** — Python Redfish/BMC client (systems, chassis, managers, accounts) used by the Redfish API Lab and available to any project needing out-of-band hardware telemetry.
+
 ---
 
 ## ⚙️ How to Run

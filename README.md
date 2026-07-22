@@ -1,31 +1,43 @@
 # Agentic AI Portfolio 🤖🚀
 
-Welcome to my Agentic AI laboratory. This repository is a monorepo containing production-grade, autonomous, and multi-agent systems. Each project is self-contained and showcases a different architectural pattern of modern AI engineering (such as Swarms, RAG, tool-use, and MCP integration).
+Welcome to my Agentic AI laboratory. This repository is a monorepo of autonomous,
+multi-agent systems. Each project is self-contained and showcases a different
+architectural pattern of modern AI engineering — multi-agent collaboration, agentic
+tool-use, LLM-as-judge grounding, and local-model orchestration.
 
 ---
 
 ## 🛠️ Tech Stack & Concepts
-* **Languages:** C# (.NET Core), Python
-* **Frameworks/Orchestration:** Semantic Kernel, LangGraph, AutoGen
-* **Core Concepts:** Multi-agent collaboration, Model Context Protocol (MCP), Function Calling, Vector Databases
+* **Languages:** C# (.NET 9/10), Python
+* **Frameworks/Orchestration:** Semantic Kernel, OpenTelemetry + Langfuse, FastAPI (ML sidecar)
+* **LLM Providers:** Config-switchable — Ollama (local), OpenAI, Azure OpenAI, Gemini, Claude, OpenAI-compatible endpoints
+* **Core Concepts:** Multi-agent collaboration, function calling, agent self-critique, groundedness judging, deterministic fallbacks, cost guardrails
 
 ---
 
 ## 📂 Featured Projects
 
-### 🎥 1. Multi-Agent YouTube Automation Channel
-An autonomous multi-agent system designed to plan, script, and monitor a faceless YouTube channel focused on high-quality race car sounds.
-* **Architecture:** Supervisor-Worker Pattern (Content Planner Agent, Audio Compiler Agent, SEO Metadata Agent).
-* **Core Tech:** C#, Semantic Kernel, Custom MCP servers for media storage.
-* **[Explore Project Directory 📂](./projects/01-multi-agent-youtube)** | **[Architecture Design 📊](./projects/01-multi-agent-youtube#architecture)**
+### 🏭 1. AeroMind IQ — Manufacturing Anomaly Investigation Squad
+A multi-agent backend that watches a live manufacturing database for production anomalies
+and coordinates five Semantic Kernel agents — Auditor, Reviewer, Fetcher, Reporter, and a
+Groundedness Judge — to investigate, draft a root-cause report, and grade the report
+against the actual query evidence.
+* **Architecture:** Supervisor cycle with an in-line critic (SQL review before execution) and an LLM-as-judge grading pass.
+* **Core Tech:** C# (.NET 10), Semantic Kernel, Postgres, scikit-learn Isolation Forest (FastAPI sidecar), OpenTelemetry → Langfuse, per-cycle token/cost tracking.
+* **[Explore Project 📂](./Projects/AeroMindIQ)**
 
-### 📈 2. Real-Time Financial Swarm
-A swarm of cooperative agents analyzing real-time market data, sentiment, and technical indicators to compile investment-ready research briefs.
-* **Architecture:** Decentralized Choreography.
-* **Core Tech:** Python, LangGraph, Qdrant Vector DB, Tavily Search API.
-* **[Explore Project Directory 📂](./projects/02-financial-analyst-swarm)**
+### 🔎 2. RCA Engine — Agentic Failure Triage for Server Hardware
+An autonomous agent that triages server-node hardware failures from a raw diagnostic
+bundle (Redfish BMC events, PCIe AER registers, kernel dmesg), isolates the failing
+subsystem via LLM tool-calling against native C# parsers, and emits a structured RCA
+report (JSON + Markdown).
+* **Architecture:** Two-phase agent loop (investigate with tools → validated structured submission) with a deterministic rule-based fallback so the pipeline always ships a report.
+* **Core Tech:** C# (.NET 9), Semantic Kernel, local quantized LLM via Ollama (llama3.2), xUnit, Docker Compose.
+* **[Explore Project 📂](./Projects/RCA_Engine)** | **[Interactive Demo 🖥️](./Projects/RCA_Engine/docs/index.html)**
 
 ---
 
 ## ⚙️ How to Run
-Most projects use Docker Compose for easy evaluation. Check the individual project directories for specific environment variable setups (.env).
+Each project directory has its own README with setup instructions. Both projects use
+Docker Compose for their infrastructure (Postgres/Langfuse for AeroMind IQ; Ollama for
+RCA Engine), and both degrade gracefully when optional services are unavailable.

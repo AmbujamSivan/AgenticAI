@@ -52,6 +52,10 @@ account management — no real hardware needed.
 ---
 
 ## ⚙️ How to Run
+> **Note:** this repo uses a git **submodule** (the DMTF Redfish emulator in the Redfish
+> API Lab). Clone with `git clone --recurse-submodules`, or run
+> `git submodule update --init` after a plain clone — otherwise that folder will be empty.
+
 Each project directory has its own README with setup instructions. Both projects use
 Docker Compose for their infrastructure (Postgres/Langfuse for AeroMind IQ; Ollama for
 RCA Engine), and both degrade gracefully when optional services are unavailable.

@@ -9,24 +9,32 @@ Two pieces:
   (third-party, DMTF copyright — see its `LICENSE.md`), which serves a standards-compliant
   Redfish service on localhost, backed by static mockup resources.
 
-  > **Vendored snapshot, not a live clone:** this folder is a copy of upstream
-  > **v1.2.2** (commit [`5f51d8a`](https://github.com/DMTF/Redfish-Interface-Emulator/commit/5f51d8a),
-  > `.git` removed) so the demo is self-contained and runs straight from a clone of this
-  > monorepo. It does not track upstream — to take a newer emulator release, re-copy the
-  > upstream tree over this folder (excluding `.git/` and `venv/`) and commit the refresh
-  > as a single change, noting the new version here.
+  > **⚠️ Git submodule — clone recursively.** `redfish_emulator/` is a git **submodule**
+  > pinned to upstream **v1.2.2** (commit [`5f51d8a`](https://github.com/DMTF/Redfish-Interface-Emulator/commit/5f51d8a),
+  > which includes Reset support, virtual media, and RAID volume management). A plain
+  > `git clone` of this monorepo leaves the folder **empty** — get the contents with:
+  >
+  > ```bash
+  > git clone --recurse-submodules https://github.com/AmbujamSivan/AgenticAI.git
+  > # or, in an existing clone:
+  > git submodule update --init
+  > ```
+  >
+  > To move the pin to a newer upstream commit: `cd redfish_emulator && git pull`, then
+  > commit the updated submodule pointer from the monorepo root.
 - **`test_emulator.py`** — a walkthrough script driving the toolkit against the emulator:
   discovers Systems/Chassis/Managers, reads and changes power state, samples BIOS
   attributes, reads thermal/power telemetry, and manages BMC accounts.
 
 ## Run it
 
-1. Start the emulator:
+1. Start the emulator (venv lives in this directory, not inside the submodule, so the
+   submodule checkout stays clean):
 
    ```bash
-   cd redfish_emulator
-   pip3 install -r requirements.txt
-   python3 emulator.py -port 5001
+   python3 -m venv venv
+   ./venv/bin/pip install -r redfish_emulator/requirements.txt
+   cd redfish_emulator && ../venv/bin/python emulator.py -port 5001
    ```
 
 2. In another terminal, run the toolkit demo from this directory (it imports

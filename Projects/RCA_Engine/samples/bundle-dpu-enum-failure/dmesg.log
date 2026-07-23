@@ -1,0 +1,17 @@
+[    0.000000] Linux version 6.8.0-azure (build@fleet) (gcc 13.2.0) #1 SMP
+[    0.405112] DMI: Microsoft Corporation Virtual Node Gen9.5/Open CloudServer, BIOS C2010.BS.3F41 02/11/2026
+[    4.021384] pci 0000:b3:00.0: [15b3:a2d6] type 00 class 0x020000
+[    4.022170] pci 0000:b3:00.0: reg 0x10: [mem 0x38bffe000000-0x38bfffffffff 64bit pref]
+[    4.030512] pci 0000:b3:00.1: config read failed, device not responding
+[    4.031288] pci 0000:b3:00.1: unable to read vendor id: 0xffffffff
+[    4.032045] pci 0000:b3:00.1: broken device, skipping to next function
+[    4.040421] pci 0000:b3:00.2: config read failed, device not responding
+[    4.041190] pci 0000:b3:00.2: unable to read vendor id: 0xffffffff
+[    4.052873] pci 0000:b3:00.0: BAR 2: failed to assign [mem size 0x00800000 64bit pref]
+[   12.310457] mlx5_core 0000:b3:00.0: wait_fw_init:236:(pid 512): Waiting for FW initialization, timeout abort in 100s
+[   62.412208] mlx5_core 0000:b3:00.0: wait_fw_init:236:(pid 512): Waiting for FW initialization, timeout abort in 50s
+[  112.518734] mlx5_core 0000:b3:00.0: mlx5_function_setup:1203:(pid 512): Firmware over 120000 MS in pre-initializing state, aborting
+[  112.519402] mlx5_core 0000:b3:00.0: probe_one:1935:(pid 512): mlx5_init_one failed with error code -16
+[  112.520018] mlx5_core: probe of 0000:b3:00.0 failed with error -16
+[  118.204551] pci 0000:3b:00.0: nvme controller enumerated normally
+[  120.111203] systemd-networkd[812]: mlx5p1: interface not found; SDN overlay agent start deferred

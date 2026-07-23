@@ -18,6 +18,8 @@ public static class DeterministicTriage
             [FailureCategory.MemorySubsystem] = ScoreMemory(bundle),
             [FailureCategory.StorageNvme] = ScoreNvme(bundle),
             [FailureCategory.PcieLink] = ScorePcieLink(bundle),
+            [FailureCategory.PcieEnumeration] = ScoreEnumeration(bundle),
+            [FailureCategory.DpuOffload] = ScoreOffload(bundle),
         };
 
         var best = scores.OrderByDescending(kv => kv.Value.Score).First();
@@ -79,6 +81,34 @@ public static class DeterministicTriage
                     $"Reseat the device/riser at {component}; inspect connector",
                     "If errors persist after reseat, replace the riser/cable, then the endpoint device",
                     "Compare correctable-error counters before/after service to confirm fix"
+                ],
+            },
+            FailureCategory.PcieEnumeration => new RcaReport
+            {
+                Category = FailureCategory.PcieEnumeration,
+                FailingComponent = component,
+                Summary = $"PCIe function enumeration failure on {component}: config-space reads failing / functions missing, with device firmware stuck in initialization.",
+                RootCause = $"The device at {component} failed to enumerate — config space unreadable and firmware init timing out. Fault is in the endpoint device (likely DPU firmware/hardware), not the host PCIe fabric.",
+                CustomerImpact = "Network/accelerator functions backed by the device are absent from the host; dependent workloads cannot start or lost connectivity at boot.",
+                RecommendedActions =
+                [
+                    $"Attempt DPU firmware recovery / cold reset (power-cycle, not warm reboot) of {component}",
+                    "If functions still fail to enumerate, collect device firmware logs and RMA the device",
+                    "Verify slot with a known-good device to exonerate the riser/socket"
+                ],
+            },
+            FailureCategory.DpuOffload => new RcaReport
+            {
+                Category = FailureCategory.DpuOffload,
+                FailingComponent = component,
+                Summary = $"DPU offload-engine degradation on {component}: flow-rule programming failures forced the datapath to fall back to the host CPU.",
+                RootCause = $"The offload engine on {component} is rejecting flow-table programming (resource exhaustion / bad resource state). Traffic is being processed on the host datapath instead of in hardware — the PCIe link itself is healthy.",
+                CustomerImpact = "No outage, but throughput drops and host CPU utilization spikes while offload is bypassed; latency-sensitive tenants see degradation.",
+                RecommendedActions =
+                [
+                    $"Restart the offload/steering agent and reprogram flow tables on {component}",
+                    "Check DPU firmware version against known flow-table-leak issues; upgrade if applicable",
+                    "Cap offloaded-flow scale or drain latency-sensitive workloads until offload is restored"
                 ],
             },
             _ => new RcaReport { Category = FailureCategory.Unknown }
@@ -230,5 +260,82 @@ public static class DeterministicTriage
 
         var component = suspect is not null ? $"{suspect.Address} ({suspect.Description})" : "unknown PCIe device";
         return (score, evidence, component);
+    }
+
+    private static (double, List<EvidenceItem>, string) ScoreEnumeration(DiagnosticBundle bundle)
+    {
+        var evidence = new List<EvidenceItem>();
+        double score = 0;
+
+        var enumLines = bundle.DmesgLines.Where(l => l.Category == DmesgCategory.PcieEnumeration).ToList();
+        if (enumLines.Count > 0)
+        {
+            score += enumLines.Count * 8;
+            evidence.Add(new EvidenceItem { Source = "dmesg", Detail = $"{enumLines.Count} enumeration-failure lines, e.g.: {enumLines[0].Message}" });
+        }
+
+        var notDetected = bundle.RedfishEvents
+            .Where(e => e.MessageId.Contains("DeviceNotDetected", StringComparison.OrdinalIgnoreCase) ||
+                        e.MessageId.Contains("FirmwareInit", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (notDetected.Count > 0)
+        {
+            score += notDetected.Count * 10;
+            evidence.Add(new EvidenceItem { Source = "redfish", Detail = $"{notDetected.Count} device-not-detected/firmware-init events, e.g.: {notDetected[^1].MessageId} @ {notDetected[^1].OriginOfCondition}" });
+        }
+
+        var component =
+            notDetected.LastOrDefault()?.OriginOfCondition.Split('/').LastOrDefault()
+            ?? ExtractPciAddress(enumLines)
+            ?? "unknown PCIe device";
+        return (score, evidence, component);
+    }
+
+    private static (double, List<EvidenceItem>, string) ScoreOffload(DiagnosticBundle bundle)
+    {
+        var evidence = new List<EvidenceItem>();
+        double score = 0;
+
+        var offloadLines = bundle.DmesgLines.Where(l => l.Category == DmesgCategory.OffloadFallback).ToList();
+        if (offloadLines.Count > 0)
+        {
+            score += offloadLines.Count * 6;
+            evidence.Add(new EvidenceItem { Source = "dmesg", Detail = $"{offloadLines.Count} offload-failure/fallback lines, e.g.: {offloadLines[0].Message}" });
+
+            if (offloadLines.Any(l => l.Message.Contains("falling back to host", StringComparison.OrdinalIgnoreCase)))
+            {
+                score += 15;
+                evidence.Add(new EvidenceItem { Source = "dmesg", Detail = "Explicit fallback-to-host-datapath event — hardware offload bypassed" });
+            }
+        }
+
+        var offloadEvents = bundle.RedfishEvents
+            .Where(e => e.MessageId.Contains("Offload", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (offloadEvents.Count > 0)
+        {
+            score += offloadEvents.Count * 5;
+            evidence.Add(new EvidenceItem { Source = "redfish", Detail = $"{offloadEvents.Count} offload-engine events, e.g.: {offloadEvents[^1].MessageId} @ {offloadEvents[^1].OriginOfCondition}" });
+        }
+
+        // A healthy link on the implicated adapter strengthens "offload engine, not fabric".
+        var adapter = bundle.PcieDevices.FirstOrDefault(d =>
+            ExtractPciAddress(offloadLines) is { } addr && d.Address.Contains(addr, StringComparison.OrdinalIgnoreCase));
+        if (adapter is not null && score > 0 && !adapter.IsLinkDowntrained && adapter.AerUncorrectableStatus == 0)
+            evidence.Add(new EvidenceItem { Source = "pcie-aer", Detail = $"{adapter.Address}: link {adapter.LinkStatus.Speed} {adapter.LinkStatus.Width}, AER clean — fabric exonerated" });
+
+        var component = adapter is not null
+            ? $"{adapter.Address} ({adapter.Description})"
+            : offloadEvents.LastOrDefault()?.OriginOfCondition.Split('/').LastOrDefault()
+              ?? ExtractPciAddress(offloadLines) ?? "unknown adapter";
+        return (score, evidence, component);
+    }
+
+    private static string? ExtractPciAddress(List<DmesgLine> lines)
+    {
+        var match = lines
+            .Select(l => System.Text.RegularExpressions.Regex.Match(l.Message, @"[0-9a-f]{4}:[0-9a-f]{2}:[0-9a-f]{2}\.\d"))
+            .FirstOrDefault(m => m.Success);
+        return match?.Value;
     }
 }

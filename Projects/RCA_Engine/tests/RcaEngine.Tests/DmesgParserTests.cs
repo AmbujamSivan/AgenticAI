@@ -12,6 +12,11 @@ public class DmesgParserTests
     [InlineData("nvme nvme0: controller is down; will reset: CSTS=0xffffffff, PCI_STATUS=0x10", DmesgCategory.NvmeError)]
     [InlineData("pcieport 0000:5d:01.0: AER: Corrected error received: 0000:5e:00.0", DmesgCategory.PcieAer)]
     [InlineData("Buffer I/O error on dev nvme0n1p1, logical block 101609024, lost async page write", DmesgCategory.IoError)]
+    [InlineData("pci 0000:b3:00.1: config read failed, device not responding", DmesgCategory.PcieEnumeration)]
+    [InlineData("mlx5_core 0000:b3:00.0: wait_fw_init:236:(pid 512): Waiting for FW initialization, timeout abort in 100s", DmesgCategory.PcieEnumeration)]
+    [InlineData("mlx5_core: probe of 0000:b3:00.0 failed with error -16", DmesgCategory.PcieEnumeration)]
+    [InlineData("openvswitch: mlx5p1: flow offload failed (rule limit), falling back to host datapath", DmesgCategory.OffloadFallback)]
+    [InlineData("mlx5_core 0000:17:00.0: mlx5_cmd_out_err:806:(pid 2231): SET_FLOW_TABLE_ENTRY(0x936) op_mod(0x0) failed, status bad resource state(0x9), syndrome (0x3ad328)", DmesgCategory.OffloadFallback)]
     [InlineData("systemd[1]: Started Daily apt download activities.", DmesgCategory.Other)]
     public void Classify_RecognizesFaultClasses(string message, DmesgCategory expected)
     {

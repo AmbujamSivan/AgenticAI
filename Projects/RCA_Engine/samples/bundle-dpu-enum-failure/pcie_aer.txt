@@ -1,0 +1,17 @@
+# PCIe AER register snapshot — collected by diagnostic bundle tool
+# NOTE: DPU at 0000:b3 expected to expose functions .0/.1/.2; only .0 responded to config cycles.
+Device: 0000:3b:00.0
+Description: Samsung PM9A3 NVMe SSD Controller
+LinkCapabilities: Speed 16GT/s, Width x4
+LinkStatus: Speed 16GT/s, Width x4
+AerCorrectableStatus: 0x00000000
+AerUncorrectableStatus: 0x00000000
+AerCorrectableCount: 0
+
+Device: 0000:b3:00.0
+Description: NVIDIA BlueField-2 DPU (function 0; functions .1/.2 not enumerated)
+LinkCapabilities: Speed 16GT/s, Width x16
+LinkStatus: Speed 16GT/s, Width x16
+AerCorrectableStatus: 0x00000000
+AerUncorrectableStatus: 0x00000000
+AerCorrectableCount: 1

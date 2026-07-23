@@ -88,6 +88,8 @@ Configuration can also come from environment variables with the `RCA_` prefix, e
 | `bundle-memory-ce-storm` | Sustained EDAC corrected-error storm + BMC ECC-rate-exceeded event, clean PCIe | `MemorySubsystem` — degrading DIMM (predictive failure) |
 | `bundle-nvme-controller-failure` | NVMe I/O timeouts → controller-down (`CSTS=0xffffffff`) → device removal, drive health events, AER CompletionTimeout | `StorageNvme` — dead drive controller, not the fabric |
 | `bundle-pcie-link-degrade` | Correctable AER storm (RxErr/BadTLP/BadDLLP), link downtrained 16GT/s → 2.5GT/s | `PcieLink` — physical-layer / connector fault, not the endpoint |
+| `bundle-dpu-enum-failure` | DPU functions missing from config space (`vendor id 0xffffffff`), BAR assignment failure, firmware stuck pre-init, probe abort -16 | `PcieEnumeration` — DPU firmware/enumeration failure, not the host fabric |
+| `bundle-dpu-offload-fallback` | `SET_FLOW_TABLE_ENTRY` bad-resource-state errors, OVS falling back to host datapath, link healthy | `DpuOffload` — offload engine exhausted; host CPU pressure is the symptom |
 
 ## Tests
 
@@ -95,8 +97,8 @@ Configuration can also come from environment variables with the `RCA_` prefix, e
 dotnet test
 ```
 
-21 tests cover the AER bit decoder, dmesg classifier, Redfish parser, and end-to-end
-deterministic triage of all three sample bundles.
+28 tests cover the AER bit decoder, dmesg classifier, Redfish parser, and end-to-end
+deterministic triage of all five sample bundles.
 
 ## Docker
 

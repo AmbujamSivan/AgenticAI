@@ -11,6 +11,8 @@ public enum DmesgCategory
     MachineCheck,             // MCE events
     NvmeError,                // NVMe controller timeouts / resets / removal
     PcieAer,                  // pcieport AER messages
+    PcieEnumeration,          // config-space read failures, BAR assignment, FW-init probe timeouts
+    OffloadFallback,          // DPU/SmartNIC offload programming failures, fallback to host datapath
     IoError,                  // block-layer / filesystem I/O errors
     Thermal,                  // thermal throttling
     Other
@@ -37,6 +39,8 @@ public static partial class DmesgParser
         (new Regex(@"\bmce\b|Machine check", RegexOptions.IgnoreCase), DmesgCategory.MachineCheck),
         (new Regex(@"\bnvme\b.*(timeout|abort|controller is down|reset|removing|probe failure|I/O error)", RegexOptions.IgnoreCase), DmesgCategory.NvmeError),
         (new Regex(@"pcieport.*AER|PCIe Bus Error|AER:", RegexOptions.IgnoreCase), DmesgCategory.PcieAer),
+        (new Regex(@"config read failed|config space inaccessible|unable to read vendor id|BAR \d+: failed to assign|skipping to next function|Waiting for FW initialization|pre-initializing state|probe of .+ failed|init_one failed", RegexOptions.IgnoreCase), DmesgCategory.PcieEnumeration),
+        (new Regex(@"falling back to host|flow offload failed|SET_FLOW_TABLE_ENTRY|E-Switch.*Failed|bad resource state|deferred action limit reached", RegexOptions.IgnoreCase), DmesgCategory.OffloadFallback),
         (new Regex(@"(blk_update_request|Buffer I/O error|lost async page write|critical (target|medium) error)", RegexOptions.IgnoreCase), DmesgCategory.IoError),
         (new Regex(@"thermal|throttl", RegexOptions.IgnoreCase), DmesgCategory.Thermal),
     ];

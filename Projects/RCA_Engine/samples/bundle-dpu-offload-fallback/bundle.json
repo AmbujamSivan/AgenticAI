@@ -1,0 +1,6 @@
+{
+  "IncidentId": "INC-2026-072205",
+  "NodeId": "AZ-EASTUS2-RACK17-NODE04",
+  "Description": "Tenant throughput regression + host CPU spike; SDN team suspects offload path",
+  "CollectedAt": "2026-07-22T05:30:00Z"
+}

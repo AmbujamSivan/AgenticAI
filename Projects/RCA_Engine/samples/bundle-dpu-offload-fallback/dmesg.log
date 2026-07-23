@@ -1,0 +1,17 @@
+[    0.000000] Linux version 6.8.0-azure (build@fleet) (gcc 13.2.0) #1 SMP
+[    0.401877] DMI: Microsoft Corporation Virtual Node Gen9.5/Open CloudServer, BIOS C2010.BS.3F41 02/11/2026
+[    4.118420] mlx5_core 0000:17:00.0: firmware version: 24.35.1012
+[    4.312805] mlx5_core 0000:17:00.0: E-Switch: Total vports 18, per vport: max uc(1024) max mc(16384)
+[14211.408233] mlx5_core 0000:17:00.0: mlx5_cmd_out_err:806:(pid 2231): SET_FLOW_TABLE_ENTRY(0x936) op_mod(0x0) failed, status bad resource state(0x9), syndrome (0x3ad328)
+[14211.512090] mlx5_core 0000:17:00.0: mlx5_cmd_out_err:806:(pid 2231): SET_FLOW_TABLE_ENTRY(0x936) op_mod(0x0) failed, status bad resource state(0x9), syndrome (0x3ad32b)
+[14212.007415] mlx5_core 0000:17:00.0: E-Switch: Failed to add flow steering rule, err -12
+[14212.110284] openvswitch: mlx5p1: flow offload failed (rule limit), falling back to host datapath
+[14245.881672] mlx5_core 0000:17:00.0: mlx5_cmd_out_err:806:(pid 2231): SET_FLOW_TABLE_ENTRY(0x936) op_mod(0x0) failed, status bad resource state(0x9), syndrome (0x3ad341)
+[14246.014928] openvswitch: mlx5p1: flow offload failed (rule limit), falling back to host datapath
+[14301.244517] mlx5_core 0000:17:00.0: E-Switch: Failed to add flow steering rule, err -12
+[14301.348810] openvswitch: mlx5p1: flow offload failed (rule limit), falling back to host datapath
+[14355.720163] openvswitch: ovs-system: deferred action limit reached, drop recirc action
+[14355.902447] net_ratelimit: 3121 callbacks suppressed
+[14410.334095] openvswitch: mlx5p1: flow offload failed (rule limit), falling back to host datapath
+[14410.518226] openvswitch: ovs-system: deferred action limit reached, drop recirc action
+[14466.107588] net_ratelimit: 2874 callbacks suppressed

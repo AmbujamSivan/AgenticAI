@@ -26,6 +26,8 @@ public class DeterministicTriageTests
     [InlineData("bundle-memory-ce-storm", FailureCategory.MemorySubsystem)]
     [InlineData("bundle-nvme-controller-failure", FailureCategory.StorageNvme)]
     [InlineData("bundle-pcie-link-degrade", FailureCategory.PcieLink)]
+    [InlineData("bundle-dpu-enum-failure", FailureCategory.PcieEnumeration)]
+    [InlineData("bundle-dpu-offload-fallback", FailureCategory.DpuOffload)]
     public void Run_IsolatesCorrectSubsystem(string bundleName, FailureCategory expected)
     {
         var bundle = DiagnosticBundle.Load(Path.Combine(SamplesDir(), bundleName));

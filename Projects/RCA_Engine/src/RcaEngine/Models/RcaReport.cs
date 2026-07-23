@@ -8,6 +8,8 @@ public enum FailureCategory
     MemorySubsystem,
     StorageNvme,
     PcieLink,
+    PcieEnumeration,   // device/function fails to enumerate (config space, BARs, FW init)
+    DpuOffload,        // DPU/SmartNIC offload engine degraded; datapath fell back to host
     Cpu,
     Power,
     Thermal,

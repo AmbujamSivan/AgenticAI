@@ -15,7 +15,7 @@ public sealed class ReportPlugin
     [KernelFunction("submit_rca_report")]
     [Description("Submits the final root-cause analysis verdict. Call this exactly once, after you have gathered evidence from the diagnostic tools. This ends the investigation.")]
     public string SubmitReport(
-        [Description("Failing subsystem. One of: MemorySubsystem, StorageNvme, PcieLink, Cpu, Power, Thermal, Firmware, Unknown")] string category,
+        [Description("Failing subsystem. One of: MemorySubsystem (DIMM ECC errors), StorageNvme (drive/controller failure), PcieLink (link errors, downtraining), PcieEnumeration (device or its functions MISSING from config space at boot, firmware-init timeout, probe failure), DpuOffload (device enumerated fine and link healthy, but offload rule programming fails and traffic falls back to the host datapath), Cpu, Power, Thermal, Firmware, Unknown")] string category,
         [Description("The specific failing component, e.g. 'DIMM_B0' or '0000:3b:00.0 (NVMe controller)'")] string failingComponent,
         [Description("One-paragraph summary of the incident")] string summary,
         [Description("The root cause, stated precisely")] string rootCause,
@@ -25,7 +25,7 @@ public sealed class ReportPlugin
         [Description("Confidence in the verdict from 0.0 to 1.0")] double confidence)
     {
         if (!Enum.TryParse<FailureCategory>(category.Trim(), ignoreCase: true, out var parsedCategory))
-            return $"REJECTED: '{category}' is not a valid category. Use one of: MemorySubsystem, StorageNvme, PcieLink, Cpu, Power, Thermal, Firmware. Call submit_rca_report again with corrected arguments.";
+            return $"REJECTED: '{category}' is not a valid category. Use one of: MemorySubsystem, StorageNvme, PcieLink, PcieEnumeration, DpuOffload, Cpu, Power, Thermal, Firmware. Call submit_rca_report again with corrected arguments.";
 
         if (string.IsNullOrWhiteSpace(failingComponent) || string.IsNullOrWhiteSpace(summary) || string.IsNullOrWhiteSpace(rootCause))
             return "REJECTED: failingComponent, summary, and rootCause must all be non-empty. Investigate with the diagnostic tools first, then call submit_rca_report again with complete arguments.";

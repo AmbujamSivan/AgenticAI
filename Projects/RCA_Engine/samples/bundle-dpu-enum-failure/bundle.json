@@ -1,0 +1,6 @@
+{
+  "IncidentId": "INC-2026-072104",
+  "NodeId": "AZ-CENTRALUS-RACK05-NODE09",
+  "Description": "Node failed to rejoin SDN overlay after maintenance reboot; DPU functions missing from host",
+  "CollectedAt": "2026-07-21T08:15:00Z"
+}

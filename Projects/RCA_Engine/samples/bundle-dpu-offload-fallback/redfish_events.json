@@ -1,0 +1,38 @@
+{
+  "@odata.type": "#LogEntryCollection.LogEntryCollection",
+  "Name": "System Event Log",
+  "Members": [
+    {
+      "Id": "5501",
+      "Created": "2026-07-22T04:02:18Z",
+      "Severity": "Warning",
+      "MessageId": "NetworkDevice.1.0.OffloadEngineDegraded",
+      "Message": "Hardware offload engine reported degraded state; rule programming failures observed.",
+      "OriginOfCondition": "/redfish/v1/Systems/1/NetworkAdapters/DPU1"
+    },
+    {
+      "Id": "5502",
+      "Created": "2026-07-22T04:19:44Z",
+      "Severity": "Warning",
+      "MessageId": "NetworkDevice.1.0.OffloadEngineDegraded",
+      "Message": "Hardware offload engine reported degraded state; rule programming failures observed.",
+      "OriginOfCondition": "/redfish/v1/Systems/1/NetworkAdapters/DPU1"
+    },
+    {
+      "Id": "5503",
+      "Created": "2026-07-22T04:31:02Z",
+      "Severity": "Critical",
+      "MessageId": "NetworkDevice.1.0.OffloadResourceExhausted",
+      "Message": "Offload flow-table resources exhausted; new flows processed by host.",
+      "OriginOfCondition": "/redfish/v1/Systems/1/NetworkAdapters/DPU1"
+    },
+    {
+      "Id": "5504",
+      "Created": "2026-07-22T04:45:00Z",
+      "Severity": "OK",
+      "MessageId": "Thermal.1.0.TemperatureNormal",
+      "Message": "All thermal sensors within normal range.",
+      "OriginOfCondition": "/redfish/v1/Chassis/1/Thermal"
+    }
+  ]
+}

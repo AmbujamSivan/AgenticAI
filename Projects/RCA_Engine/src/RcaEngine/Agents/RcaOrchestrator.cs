@@ -31,7 +31,11 @@ public sealed class RcaOrchestrator(LlmOptions llmOptions, ILogger logger)
         3. Distinguish root cause from symptoms. Corrected memory errors point at a DIMM,
            not the CPU. NVMe controller-down with clean PCIe links points at the drive,
            not the fabric. A correctable AER storm with a downtrained link points at the
-           physical link (connector/riser), not the endpoint logic.
+           physical link (connector/riser), not the endpoint logic. Config-space read
+           failures and firmware-init probe timeouts (missing PCIe functions) point at the
+           endpoint device's enumeration/firmware path (PcieEnumeration), not the host.
+           Flow-offload programming failures with 'falling back to host datapath' point at
+           the DPU/SmartNIC offload engine (DpuOffload) — host CPU pressure is the symptom.
 
         When you have isolated the failure, call submit_rca_report exactly once with your
         structured verdict, then stop. Keep tool arguments precise. Do not invent evidence:

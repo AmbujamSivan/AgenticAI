@@ -184,8 +184,8 @@
     <p class="lede">Given a raw diagnostic bundle &#x2014; <strong>Redfish BMC events, PCIe AER registers, kernel dmesg</strong> &#x2014; a local LLM plans tool calls against native C# parsers, isolates the failing subsystem, and files a structured RCA report. Below is a replay of real investigations run with <strong>llama3.2 on Ollama</strong>, a 2&nbsp;GB quantized model.</p>
     <div class="stats">
       <div class="stat"><b>3</b><span>log sources fused</span></div>
-      <div class="stat"><b>~17s</b><span>bundle &#x2192; verdict</span></div>
-      <div class="stat"><b>21</b><span>xunit tests</span></div>
+      <div class="stat"><b>17&#x2013;40s</b><span>bundle &#x2192; verdict</span></div>
+      <div class="stat"><b>28</b><span>xunit tests</span></div>
       <div class="stat"><b>100%</b><span>local &#x2014; no cloud calls</span></div>
     </div>
   </div>
@@ -204,6 +204,14 @@
       <button class="scenario-btn" data-s="pcie" aria-pressed="false">
         <h3><span class="sev" style="background: var(--warn)"></span>PCIe link degrade</h3>
         <p>INC-2026-072003 &#xB7; GPU link downtrained 16GT/s &#x2192; 2.5GT/s</p>
+      </button>
+      <button class="scenario-btn" data-s="dpuenum" aria-pressed="false">
+        <h3><span class="sev" style="background: var(--crit)"></span>DPU enumeration failure</h3>
+        <p>INC-2026-072104 &#xB7; functions missing, FW stuck pre-init</p>
+      </button>
+      <button class="scenario-btn" data-s="dpuoffload" aria-pressed="false">
+        <h3><span class="sev" style="background: var(--warn)"></span>DPU offload fallback</h3>
+        <p>INC-2026-072205 &#xB7; flows falling back to host datapath</p>
       </button>
     </div>
 
@@ -406,6 +414,75 @@
           "Reseat the GPU and riser at 0000:5e:00.0; inspect the connector",
           "If errors persist, replace the riser/cable before swapping the endpoint",
           "Compare correctable-error counters before/after service to confirm the fix",
+        ],
+      },
+    },
+    dpuenum: {
+      node: "AZ-CENTRALUS-RACK05-NODE09",
+      incident: "INC-2026-072104",
+      category: "PcieEnumeration",
+      steps: [
+        { call: "dmesg.get_dmesg_summary()",
+          result: "Total kernel log lines: 17\n  <span class='hl-crit'>PcieEnumeration: 11 lines over 108s</span>" },
+        { call: "dmesg.search_dmesg(pattern: \"config read|vendor id|FW init\")",
+          result: "<span class='hl-crit'>pci 0000:b3:00.1: config read failed, device not responding</span>\npci 0000:b3:00.1: unable to read vendor id: 0xffffffff\nmlx5_core 0000:b3:00.0: Waiting for FW initialization, timeout abort in 100s\n<span class='hl-crit'>mlx5_core 0000:b3:00.0: Firmware over 120000 MS in pre-initializing state, aborting</span>\nmlx5_core: probe of 0000:b3:00.0 failed with error -16" },
+        { call: "redfish.get_redfish_events(severity: \"Critical\")",
+          result: "<span class='hl-crit'>PCIeDevice.1.0.DeviceNotDetected</span> @ \u2026/PCIeDevices/DPU1 \u2014 expected functions not enumerated\n<span class='hl-crit'>NetworkDevice.1.0.ConnectionDropped</span> @ \u2026/NetworkAdapters/DPU1" },
+        { call: "pcie.list_pcie_devices()",
+          result: "0000:3b:00.0 \u2014 PM9A3 NVMe: link 16GT/s x4 (clean)\n0000:b3:00.0 \u2014 BlueField-2 DPU fn0: link 16GT/s x16, AER clean <span class='hl-warn'>(functions .1/.2 not enumerated)</span>" },
+        { call: "report.submit_rca_report(category: \"PcieEnumeration\", \u2026)",
+          result: "RCA report submitted successfully. Investigation complete." },
+      ],
+      verdict: "verdict: PcieEnumeration / DPU1 (0000:b3) \u2014 device firmware/enumeration failure, not the fabric \u00B7 33.7s",
+      report: {
+        component: "DPU1 \u2014 0000:b3:00.0 (BlueField-2)",
+        confidence: "95%", generatedBy: "llm-agent (llama3.2)", duration: "33.7s",
+        rootCause: "The DPU failed to enumerate: functions .1/.2 return 0xffffffff on config reads, a BAR failed assignment, and device firmware sat in pre-initializing state past the 120s window until the driver probe aborted (-16). Function 0's link trains fine \u2014 the fault is the endpoint's firmware/enumeration path, not the host PCIe fabric.",
+        impact: "The DPU's network functions are absent from the host, so the node could not rejoin the SDN overlay after its maintenance reboot \u2014 effectively out of rotation.",
+        evidence: [
+          "<b>[dmesg]</b> 11 enumeration-failure lines: config reads failing, vendor id 0xffffffff, FW pre-init timeout, probe abort -16",
+          "<b>[redfish]</b> Critical: DeviceNotDetected + FirmwareInitTimeout @ DPU1",
+          "<b>[pcie-aer]</b> Function 0 link 16GT/s x16 with clean AER \u2014 fabric exonerated",
+        ],
+        actions: [
+          "Cold power-cycle (not warm reboot) to force DPU firmware recovery",
+          "If functions still fail to enumerate, collect DPU firmware logs and RMA the device",
+          "Verify the slot with a known-good device to exonerate the riser/socket",
+        ],
+      },
+    },
+    dpuoffload: {
+      node: "AZ-EASTUS2-RACK17-NODE04",
+      incident: "INC-2026-072205",
+      category: "DpuOffload",
+      steps: [
+        { call: "dmesg.get_dmesg_summary()",
+          result: "Total kernel log lines: 17\n  <span class='hl-warn'>OffloadFallback: 11 lines over 199s</span>" },
+        { call: "dmesg.search_dmesg(pattern: \"offload|FLOW_TABLE\")",
+          result: "mlx5_core 0000:17:00.0: SET_FLOW_TABLE_ENTRY(0x936) failed, status <span class='hl-warn'>bad resource state(0x9)</span>\nmlx5_core 0000:17:00.0: E-Switch: Failed to add flow steering rule, err -12\n<span class='hl-warn'>openvswitch: mlx5p1: flow offload failed (rule limit), falling back to host datapath</span>\nopenvswitch: ovs-system: deferred action limit reached, drop recirc action" },
+        { call: "redfish.get_redfish_event_summary()",
+          result: "NetworkDevice.1.0.OffloadEngineDegraded: 2 (Warning)\n<span class='hl-crit'>NetworkDevice.1.0.OffloadResourceExhausted: 1 (Critical)</span> @ \u2026/NetworkAdapters/DPU1" },
+        { call: "pcie.decode_pcie_aer_registers(deviceAddress: \"0000:17:00.0\")",
+          result: "Link capability: 16GT/s x16; current: 16GT/s x16 (healthy)\nCorrectable/Uncorrectable Error Status: none \u2014 <span class='hl-warn'>fabric exonerated; fault is above the link</span>" },
+        { call: "report.submit_rca_report(category: \"DpuOffload\", \u2026)",
+          result: "RCA report submitted successfully. Investigation complete." },
+      ],
+      verdict: "verdict: DpuOffload / 0000:17:00.0 BlueField-2 \u2014 offload engine exhausted, datapath on host CPU \u00B7 17.8s",
+      report: {
+        component: "0000:17:00.0 \u2014 BlueField-2 DPU (DPU1)",
+        confidence: "80%", generatedBy: "llm-agent (llama3.2)", duration: "17.8s",
+        rootCause: "The DPU's offload engine is rejecting flow-table programming (bad resource state / rule limit), so OVS fell back to the host datapath. The PCIe link is healthy and the device enumerated normally \u2014 this is offload-engine resource exhaustion, not a fabric or enumeration fault.",
+        impact: "No outage, but flows are processed on host CPUs: tenant throughput regression, host CPU spike, and packet drops under the deferred-action limit \u2014 the symptoms the SDN team escalated.",
+        evidence: [
+          "<b>[dmesg]</b> SET_FLOW_TABLE_ENTRY bad-resource-state errors + E-Switch rule-add failures (-12)",
+          "<b>[dmesg]</b> Explicit OVS fallback-to-host-datapath events; deferred-action drops",
+          "<b>[redfish]</b> OffloadEngineDegraded (x2) escalating to OffloadResourceExhausted @ DPU1",
+          "<b>[pcie-aer]</b> Link 16GT/s x16, AER clean \u2014 offload engine, not the link",
+        ],
+        actions: [
+          "Restart the offload/steering agent and reprogram flow tables on DPU1",
+          "Check DPU firmware for known flow-table-leak issues; upgrade if applicable",
+          "Cap offloaded-flow scale or drain latency-sensitive tenants until offload is restored",
         ],
       },
     },

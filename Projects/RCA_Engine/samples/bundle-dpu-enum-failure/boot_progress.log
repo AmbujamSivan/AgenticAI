@@ -1,0 +1,13 @@
+# Platform boot-progress log captured by BMC (POST codes + UEFI stage messages)
+POST 0x02 SEC: CPU early init OK
+POST 0x15 SEC: microcode load OK
+POST 0x32 PEI: memory init OK (24 DIMMs trained)
+POST 0x4F PEI: DXE IPL handoff
+POST 0x61 DXE: driver dispatch start
+POST 0x9A DXE: PCI bus enumeration start
+POST 0x9A DXE: WARN config read failed 0000:b3:00.1 (vendor id 0xffffffff)
+POST 0x9A DXE: WARN config read failed 0000:b3:00.2 (vendor id 0xffffffff)
+POST 0xB4 DXE: WARN option ROM init 0000:b3:00.0 OpROM read FAILED
+POST 0x9C DXE: PCI resource allocation complete (1 BAR request unsatisfied)
+POST 0xA0 BDS: boot device selection
+POST 0xAD OS: OS loader handoff

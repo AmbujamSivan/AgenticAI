@@ -284,6 +284,26 @@ public static class DeterministicTriage
             evidence.Add(new EvidenceItem { Source = "redfish", Detail = $"{notDetected.Count} device-not-detected/firmware-init events, e.g.: {notDetected[^1].MessageId} @ {notDetected[^1].OriginOfCondition}" });
         }
 
+        // Pre-OS corroboration: option-ROM / config-read failures already visible at DXE.
+        var bootErrors = bundle.BootProgress
+            .Where(e => e.IsError && (e.Message.Contains("OpROM", StringComparison.OrdinalIgnoreCase) ||
+                                      e.Message.Contains("config read", StringComparison.OrdinalIgnoreCase) ||
+                                      e.Message.Contains("0xffffffff", StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+        if (bootErrors.Count > 0 && score > 0)
+        {
+            score += bootErrors.Count * 5;
+            evidence.Add(new EvidenceItem { Source = "boot-progress", Detail = $"Fault visible pre-OS: POST 0x{bootErrors[0].Code:X2} {bootErrors[0].Stage}: {bootErrors[0].Message}" });
+        }
+
+        // DPU's own console: boot-chain errors from inside the device settle root cause.
+        var dpuBootErrors = bundle.DpuConsole.Where(l => l.Category == DpuConsoleCategory.BootError).ToList();
+        if (dpuBootErrors.Count > 0)
+        {
+            score += dpuBootErrors.Count * 6;
+            evidence.Add(new EvidenceItem { Source = "dpu-console", Detail = $"{dpuBootErrors.Count} DPU-internal boot/firmware errors, e.g.: [{dpuBootErrors[0].Subsystem}] {dpuBootErrors[0].Message}" });
+        }
+
         var component =
             notDetected.LastOrDefault()?.OriginOfCondition.Split('/').LastOrDefault()
             ?? ExtractPciAddress(enumLines)
@@ -316,6 +336,14 @@ public static class DeterministicTriage
         {
             score += offloadEvents.Count * 5;
             evidence.Add(new EvidenceItem { Source = "redfish", Detail = $"{offloadEvents.Count} offload-engine events, e.g.: {offloadEvents[^1].MessageId} @ {offloadEvents[^1].OriginOfCondition}" });
+        }
+
+        // DPU's own console confirming resource exhaustion from inside the offload engine.
+        var dpuOffloadErrors = bundle.DpuConsole.Where(l => l.Category == DpuConsoleCategory.OffloadError).ToList();
+        if (dpuOffloadErrors.Count > 0)
+        {
+            score += dpuOffloadErrors.Count * 6;
+            evidence.Add(new EvidenceItem { Source = "dpu-console", Detail = $"{dpuOffloadErrors.Count} DPU-internal offload-engine errors, e.g.: [{dpuOffloadErrors[0].Subsystem}] {dpuOffloadErrors[0].Message}" });
         }
 
         // A healthy link on the implicated adapter strengthens "offload engine, not fabric".

@@ -181,9 +181,9 @@
   <div class="hero">
     <p class="eyebrow">Agentic Root-Cause Analysis &#xB7; .NET 9 + Semantic Kernel</p>
     <h1>An autonomous agent that reads the logs so the on-call engineer doesn't have to.</h1>
-    <p class="lede">Given a raw diagnostic bundle &#x2014; <strong>Redfish BMC events, PCIe AER registers, kernel dmesg</strong> &#x2014; a local LLM plans tool calls against native C# parsers, isolates the failing subsystem, and files a structured RCA report. Below is a replay of real investigations run with <strong>llama3.2 on Ollama</strong>, a 2&nbsp;GB quantized model.</p>
+    <p class="lede">Given a raw diagnostic bundle &#x2014; <strong>Redfish BMC events, PCIe AER registers, kernel dmesg, pre-OS boot stages (POST/UEFI), and the DPU's own console</strong> &#x2014; a local LLM plans tool calls against native C# parsers, isolates the failing subsystem, and files a structured RCA report. Below is a replay of real investigations run with <strong>llama3.2 on Ollama</strong>, a 2&nbsp;GB quantized model.</p>
     <div class="stats">
-      <div class="stat"><b>3</b><span>log sources fused</span></div>
+      <div class="stat"><b>5</b><span>log sources fused</span></div>
       <div class="stat"><b>17&#x2013;40s</b><span>bundle &#x2192; verdict</span></div>
       <div class="stat"><b>28</b><span>xunit tests</span></div>
       <div class="stat"><b>100%</b><span>local &#x2014; no cloud calls</span></div>
@@ -248,7 +248,7 @@
       <div class="phase">
         <div class="num">FALLBACK</div>
         <h3>Always ship a report</h3>
-        <p>A rule-based scorer runs the same evidence deterministically when no LLM is reachable (<code>--no-llm</code>) or the agent never submits. The pipeline degrades gracefully, never silently.</p>
+        <p>A rule-based scorer runs the same evidence independently: it cross-checks every agent verdict (irreconcilable component disputes are settled by the evidence, recorded in the report), and runs standalone when no LLM is reachable (<code>--no-llm</code>). The pipeline degrades gracefully, never silently.</p>
       </div>
     </div>
   </section>
@@ -259,7 +259,7 @@
       <div class="arch-flow">
         <div class="arch-box">
           <h4>Raw diagnostic bundle</h4>
-          <p>redfish_events.json &#xB7; pcie_aer.txt &#xB7; dmesg.log</p>
+          <p>redfish_events.json &#xB7; pcie_aer.txt &#xB7; dmesg.log &#xB7; boot_progress.log &#xB7; dpu_console.log</p>
         </div>
         <div class="arch-arrow">&#x2192;</div>
         <div class="arch-box" style="border-color: var(--accent-dim);">
@@ -284,7 +284,15 @@
         </div>
         <div class="arch-box">
           <h4>dmesg.*</h4>
-          <p>Kernel log classified: EDAC CE/UE, MCE, NVMe, AER, I/O, thermal</p>
+          <p>Kernel log classified: EDAC CE/UE, MCE, NVMe, AER, enumeration, offload, I/O, thermal</p>
+        </div>
+        <div class="arch-box">
+          <h4>boot.*</h4>
+          <p>Pre-OS boot flow: POST codes across SEC/PEI/DXE/BDS, stage errors, OS-handoff status</p>
+        </div>
+        <div class="arch-box">
+          <h4>dpu.*</h4>
+          <p>DPU-internal (ARM-side) console: ATF/UEFI boot chain, NIC firmware, DOCA flow engine</p>
         </div>
       </div>
       <p class="arch-note">LLM endpoint &#x2014; swappable via config</p>
@@ -430,23 +438,29 @@
           result: "<span class='hl-crit'>PCIeDevice.1.0.DeviceNotDetected</span> @ \u2026/PCIeDevices/DPU1 \u2014 expected functions not enumerated\n<span class='hl-crit'>NetworkDevice.1.0.ConnectionDropped</span> @ \u2026/NetworkAdapters/DPU1" },
         { call: "pcie.list_pcie_devices()",
           result: "0000:3b:00.0 \u2014 PM9A3 NVMe: link 16GT/s x4 (clean)\n0000:b3:00.0 \u2014 BlueField-2 DPU fn0: link 16GT/s x16, AER clean <span class='hl-warn'>(functions .1/.2 not enumerated)</span>" },
+        { call: "boot.get_boot_progress()",
+          result: "OS handoff reached: yes; stage errors: 3\n<span class='hl-warn'>POST 0x9A DXE: WARN config read failed 0000:b3:00.1 (vendor id 0xffffffff)</span>\n<span class='hl-warn'>POST 0xB4 DXE: WARN option ROM init 0000:b3:00.0 OpROM read FAILED</span> \u2014 fault already visible pre-OS" },
+        { call: "dpu.search_dpu_console(pattern: \"firmware\")",
+          result: "<span class='hl-crit'>fw: NIC subsystem firmware image slot 1: crc mismatch (stored 0x8c41f2aa, computed 0x8c41f000)</span>\nfw: NIC subsystem firmware load FAILED, staying in pre-init hold\nfw: host-facing PF config space gated until NIC subsystem ready\n<span class='hl-crit'>fw: watchdog: recovery attempt 3/3 exhausted, NIC subsystem HANG in pre-init</span>" },
         { call: "report.submit_rca_report(category: \"PcieEnumeration\", \u2026)",
           result: "RCA report submitted successfully. Investigation complete." },
       ],
-      verdict: "verdict: PcieEnumeration / DPU1 (0000:b3) \u2014 device firmware/enumeration failure, not the fabric \u00B7 33.7s",
+      verdict: "verdict: PcieEnumeration / 0000:b3:00.0 BlueField-2 \u2014 corrupted NIC firmware image inside the DPU \u00B7 33.7s",
       report: {
         component: "DPU1 \u2014 0000:b3:00.0 (BlueField-2)",
         confidence: "95%", generatedBy: "llm-agent (llama3.2)", duration: "33.7s",
-        rootCause: "The DPU failed to enumerate: functions .1/.2 return 0xffffffff on config reads, a BAR failed assignment, and device firmware sat in pre-initializing state past the 120s window until the driver probe aborted (-16). Function 0's link trains fine \u2014 the fault is the endpoint's firmware/enumeration path, not the host PCIe fabric.",
+        rootCause: "The DPU's own console pins the root cause: the NIC-subsystem firmware image in flash slot 1 fails CRC, watchdog recovery is exhausted after 3 attempts, and the DPU gates its host-facing PF config space until that subsystem is ready \u2014 which is exactly why functions .1/.2 read 0xffffffff on the host and why the fault is already visible at DXE, before the OS booted. Not a host-fabric problem.",
         impact: "The DPU's network functions are absent from the host, so the node could not rejoin the SDN overlay after its maintenance reboot \u2014 effectively out of rotation.",
         evidence: [
-          "<b>[dmesg]</b> 11 enumeration-failure lines: config reads failing, vendor id 0xffffffff, FW pre-init timeout, probe abort -16",
+          "<b>[dpu-console]</b> NIC firmware slot 1 CRC mismatch; watchdog recovery 3/3 exhausted; host PF config space gated \u2014 internal root cause",
+          "<b>[boot-progress]</b> DXE-stage config-read + OpROM warnings \u2014 fault pre-dates the OS",
+          "<b>[dmesg]</b> 11 enumeration-failure lines: vendor id 0xffffffff, FW pre-init timeout, probe abort -16",
           "<b>[redfish]</b> Critical: DeviceNotDetected + FirmwareInitTimeout @ DPU1",
           "<b>[pcie-aer]</b> Function 0 link 16GT/s x16 with clean AER \u2014 fabric exonerated",
         ],
         actions: [
-          "Cold power-cycle (not warm reboot) to force DPU firmware recovery",
-          "If functions still fail to enumerate, collect DPU firmware logs and RMA the device",
+          "Re-flash the NIC-subsystem firmware image (slot 1) via the DPU management plane, or boot from the fallback slot",
+          "Cold power-cycle (not warm reboot); if enumeration still fails, RMA the device",
           "Verify the slot with a known-good device to exonerate the riser/socket",
         ],
       },
@@ -462,6 +476,8 @@
           result: "mlx5_core 0000:17:00.0: SET_FLOW_TABLE_ENTRY(0x936) failed, status <span class='hl-warn'>bad resource state(0x9)</span>\nmlx5_core 0000:17:00.0: E-Switch: Failed to add flow steering rule, err -12\n<span class='hl-warn'>openvswitch: mlx5p1: flow offload failed (rule limit), falling back to host datapath</span>\nopenvswitch: ovs-system: deferred action limit reached, drop recirc action" },
         { call: "redfish.get_redfish_event_summary()",
           result: "NetworkDevice.1.0.OffloadEngineDegraded: 2 (Warning)\n<span class='hl-crit'>NetworkDevice.1.0.OffloadResourceExhausted: 1 (Critical)</span> @ \u2026/NetworkAdapters/DPU1" },
+        { call: "dpu.get_dpu_console_summary()",
+          result: "Total DPU console lines: 11 \u2014 OffloadError: 6\n<span class='hl-warn'>fw: steering table utilization 100% (2097152/2097152 STE entries)</span>\nfw: aged-flow reclaim not keeping up (reclaim 1.2k/s, demand 8.7k/s)\novs-vswitchd[dpu]: hw-offload disabled for new flows" },
         { call: "pcie.decode_pcie_aer_registers(deviceAddress: \"0000:17:00.0\")",
           result: "Link capability: 16GT/s x16; current: 16GT/s x16 (healthy)\nCorrectable/Uncorrectable Error Status: none \u2014 <span class='hl-warn'>fabric exonerated; fault is above the link</span>" },
         { call: "report.submit_rca_report(category: \"DpuOffload\", \u2026)",
@@ -471,9 +487,10 @@
       report: {
         component: "0000:17:00.0 \u2014 BlueField-2 DPU (DPU1)",
         confidence: "80%", generatedBy: "llm-agent (llama3.2)", duration: "17.8s",
-        rootCause: "The DPU's offload engine is rejecting flow-table programming (bad resource state / rule limit), so OVS fell back to the host datapath. The PCIe link is healthy and the device enumerated normally \u2014 this is offload-engine resource exhaustion, not a fabric or enumeration fault.",
+        rootCause: "The DPU's offload engine is rejecting flow-table programming, so OVS fell back to the host datapath. The DPU's own console confirms it from the inside: the steering table sits at 100% of its 2M STE entries while aged-flow reclaim (1.2k/s) can't keep up with flow demand (8.7k/s). The PCIe link is healthy and the device enumerated normally \u2014 resource exhaustion, not a fabric or enumeration fault.",
         impact: "No outage, but flows are processed on host CPUs: tenant throughput regression, host CPU spike, and packet drops under the deferred-action limit \u2014 the symptoms the SDN team escalated.",
         evidence: [
+          "<b>[dpu-console]</b> Steering table 100% of 2M STE entries; reclaim 1.2k/s vs demand 8.7k/s \u2014 confirmed from inside the DPU",
           "<b>[dmesg]</b> SET_FLOW_TABLE_ENTRY bad-resource-state errors + E-Switch rule-add failures (-12)",
           "<b>[dmesg]</b> Explicit OVS fallback-to-host-datapath events; deferred-action drops",
           "<b>[redfish]</b> OffloadEngineDegraded (x2) escalating to OffloadResourceExhausted @ DPU1",

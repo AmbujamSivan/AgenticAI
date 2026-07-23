@@ -2,9 +2,11 @@
 
 An autonomous **C# / .NET 9** agent that triages server-node hardware failures from a raw
 diagnostic bundle. A **Semantic Kernel** orchestrator lets an LLM (local quantized model via
-**Ollama**, or OpenAI / Azure OpenAI) plan tool calls against native diagnostic parsers —
-Redfish BMC event logs, PCIe AER error registers, and the kernel log — isolate the failing
-subsystem, and emit a **structured RCA report** (JSON + Markdown).
+**Ollama**, or OpenAI / Azure OpenAI) plan tool calls against native diagnostic parsers over
+**five telemetry sources** — Redfish BMC event logs, PCIe AER error registers, the kernel
+log, the platform's **pre-OS boot-progress log** (POST codes / UEFI stages), and the
+**DPU's own control-plane console** (SmartNIC-internal telemetry, not just what the host
+saw) — isolate the failing subsystem, and emit a **structured RCA report** (JSON + Markdown).
 
 **Demo:** open [`docs/index.html`](docs/index.html) in a browser for an interactive replay of
 the agent's investigations across all three sample failure scenarios.
@@ -49,12 +51,21 @@ the agent's investigations across all three sample failure scenarios.
    - `pcie.list_pcie_devices` / `decode_pcie_aer_registers` — decodes AER status registers
      into named error bits per the PCIe spec, flags downtrained links
    - `dmesg.get_dmesg_summary` / `search_dmesg` — kernel log classified into fault classes
-     (EDAC corrected/uncorrected errors, MCE, NVMe errors, AER, I/O errors, thermal)
+     (EDAC corrected/uncorrected errors, MCE, NVMe errors, AER, enumeration, offload, I/O, thermal)
+   - `boot.get_boot_progress` — pre-OS platform boot flow: POST codes across SEC/PEI/DXE/BDS,
+     stage errors (option-ROM failures, config-read errors), OS-handoff status
+   - `dpu.get_dpu_console_summary` / `search_dpu_console` — the DPU's ARM-side control-plane
+     log (ATF/UEFI boot chain, NIC firmware, DOCA flow engine) — the device's internal view,
+     used to corroborate or refute host-side suspicions
 2. **Phase 2 — Verdict.** The `report.submit_rca_report` tool is then exposed and the model
    must submit a structured verdict (category, failing component, root cause, evidence,
    actions, confidence). Incomplete or invalid submissions are **rejected by the tool**,
    forcing the model to retry — this keeps small quantized models honest.
-3. **Fallback.** A rule-based `DeterministicTriage` scorer runs when no LLM is reachable
+3. **Cross-check.** After the agent submits, the rule-based `DeterministicTriage` scorer runs
+   the same evidence independently. If both agree on the category but name different
+   components, the agent is challenged to reconcile; if it can't, the evidence-derived
+   component wins and the correction is recorded in the report as `[cross-check]` evidence.
+4. **Fallback.** The same deterministic scorer runs standalone when no LLM is reachable
    (`--no-llm`) or the agent fails to submit, so the pipeline always produces a report.
 
 ## Prerequisites
@@ -88,8 +99,8 @@ Configuration can also come from environment variables with the `RCA_` prefix, e
 | `bundle-memory-ce-storm` | Sustained EDAC corrected-error storm + BMC ECC-rate-exceeded event, clean PCIe | `MemorySubsystem` — degrading DIMM (predictive failure) |
 | `bundle-nvme-controller-failure` | NVMe I/O timeouts → controller-down (`CSTS=0xffffffff`) → device removal, drive health events, AER CompletionTimeout | `StorageNvme` — dead drive controller, not the fabric |
 | `bundle-pcie-link-degrade` | Correctable AER storm (RxErr/BadTLP/BadDLLP), link downtrained 16GT/s → 2.5GT/s | `PcieLink` — physical-layer / connector fault, not the endpoint |
-| `bundle-dpu-enum-failure` | DPU functions missing from config space (`vendor id 0xffffffff`), BAR assignment failure, firmware stuck pre-init, probe abort -16 | `PcieEnumeration` — DPU firmware/enumeration failure, not the host fabric |
-| `bundle-dpu-offload-fallback` | `SET_FLOW_TABLE_ENTRY` bad-resource-state errors, OVS falling back to host datapath, link healthy | `DpuOffload` — offload engine exhausted; host CPU pressure is the symptom |
+| `bundle-dpu-enum-failure` | DPU functions missing from config space (`vendor id 0xffffffff`), BAR assignment failure, probe abort -16; fault visible pre-OS at DXE (config-read + OpROM warnings); DPU console shows the internal root cause: NIC-subsystem firmware image CRC mismatch, watchdog recovery exhausted, host PF config space gated | `PcieEnumeration` — corrupted DPU firmware image; not the host fabric |
+| `bundle-dpu-offload-fallback` | `SET_FLOW_TABLE_ENTRY` bad-resource-state errors, OVS falling back to host datapath, link healthy; DPU console confirms steering table at 100% (2M STE entries) with aged-flow reclaim not keeping up | `DpuOffload` — offload engine exhausted; host CPU pressure is the symptom |
 
 ## Tests
 
@@ -97,8 +108,9 @@ Configuration can also come from environment variables with the `RCA_` prefix, e
 dotnet test
 ```
 
-28 tests cover the AER bit decoder, dmesg classifier, Redfish parser, and end-to-end
-deterministic triage of all five sample bundles.
+39 tests cover the AER bit decoder, dmesg classifier, Redfish parser, boot-progress and
+DPU-console parsers, and end-to-end deterministic triage of all five sample bundles
+(including DPU-internal and boot-stage evidence assertions).
 
 ## Docker
 

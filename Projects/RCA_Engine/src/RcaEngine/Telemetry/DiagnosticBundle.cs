@@ -13,8 +13,10 @@ public sealed class BundleMetadata
 }
 
 /// <summary>
-/// A parsed diagnostic bundle: Redfish event log + PCIe AER register dump + kernel dmesg.
-/// This is the single source of truth handed to both the agent tools and the deterministic triage.
+/// A parsed diagnostic bundle spanning five telemetry sources: Redfish event log,
+/// PCIe AER registers, kernel dmesg, platform boot-progress (POST/UEFI stages),
+/// and the DPU's own control-plane console. This is the single source of truth
+/// handed to both the agent tools and the deterministic triage.
 /// </summary>
 public sealed class DiagnosticBundle
 {
@@ -22,6 +24,8 @@ public sealed class DiagnosticBundle
     public required IReadOnlyList<RedfishEvent> RedfishEvents { get; init; }
     public required IReadOnlyList<PcieDevice> PcieDevices { get; init; }
     public required IReadOnlyList<DmesgLine> DmesgLines { get; init; }
+    public IReadOnlyList<BootProgressEntry> BootProgress { get; init; } = [];
+    public IReadOnlyList<DpuConsoleLine> DpuConsole { get; init; } = [];
 
     private static readonly JsonSerializerOptions JsonOpts = new() { PropertyNameCaseInsensitive = true };
 
@@ -50,12 +54,24 @@ public sealed class DiagnosticBundle
             ? DmesgParser.Parse(File.ReadAllLines(dmesgPath))
             : [];
 
+        var bootPath = Path.Combine(bundleDir, "boot_progress.log");
+        var bootProgress = File.Exists(bootPath)
+            ? BootProgressParser.Parse(File.ReadAllLines(bootPath))
+            : (IReadOnlyList<BootProgressEntry>)[];
+
+        var dpuPath = Path.Combine(bundleDir, "dpu_console.log");
+        var dpuConsole = File.Exists(dpuPath)
+            ? DpuConsoleParser.Parse(File.ReadAllLines(dpuPath))
+            : (IReadOnlyList<DpuConsoleLine>)[];
+
         return new DiagnosticBundle
         {
             Metadata = metadata,
             RedfishEvents = redfishEvents,
             PcieDevices = pcieDevices,
-            DmesgLines = dmesgLines
+            DmesgLines = dmesgLines,
+            BootProgress = bootProgress,
+            DpuConsole = dpuConsole
         };
     }
 }

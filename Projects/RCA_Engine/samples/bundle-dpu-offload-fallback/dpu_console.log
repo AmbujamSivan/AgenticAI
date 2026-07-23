@@ -1,0 +1,12 @@
+# DPU control-plane console (ARM-side), collected via DPU BMC serial capture
+2026-07-22T03:58:11Z healthd: DPU ARM cores nominal, thermals nominal, mgmt link up
+2026-07-22T04:01:52Z fw: steering table utilization 98% (2027520/2097152 STE entries)
+2026-07-22T04:02:14Z fw: steering table utilization 100% (2097152/2097152 STE entries)
+2026-07-22T04:02:15Z doca_flow: pipe entry add failed: OUT_OF_RESOURCES (steering table full)
+2026-07-22T04:02:15Z doca_flow: pipe entry add failed: OUT_OF_RESOURCES (steering table full)
+2026-07-22T04:02:16Z ovs-vswitchd[dpu]: hw-offload disabled for new flows, notifying host datapath
+2026-07-22T04:19:40Z doca_flow: pipe entry add failed: OUT_OF_RESOURCES (steering table full)
+2026-07-22T04:19:41Z fw: steering table utilization 100% - aged-flow reclaim not keeping up (reclaim 1.2k/s, demand 8.7k/s)
+2026-07-22T04:31:00Z doca_flow: pipe entry add failed: OUT_OF_RESOURCES (steering table full)
+2026-07-22T04:31:01Z ovs-vswitchd[dpu]: hw-offload disabled for new flows, notifying host datapath
+2026-07-22T04:44:37Z healthd: DPU ARM cores nominal, thermals nominal, mgmt link up

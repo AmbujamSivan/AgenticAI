@@ -50,6 +50,25 @@ public class DeterministicTriageTests
     }
 
     [Fact]
+    public void Run_DpuEnumBundle_CitesDpuInternalAndBootStageEvidence()
+    {
+        var bundle = DiagnosticBundle.Load(Path.Combine(SamplesDir(), "bundle-dpu-enum-failure"));
+        var report = DeterministicTriage.Run(bundle);
+
+        Assert.Contains(report.Evidence, e => e.Source == "dpu-console");
+        Assert.Contains(report.Evidence, e => e.Source == "boot-progress");
+    }
+
+    [Fact]
+    public void Run_DpuOffloadBundle_CitesDpuInternalEvidence()
+    {
+        var bundle = DiagnosticBundle.Load(Path.Combine(SamplesDir(), "bundle-dpu-offload-fallback"));
+        var report = DeterministicTriage.Run(bundle);
+
+        Assert.Contains(report.Evidence, e => e.Source == "dpu-console");
+    }
+
+    [Fact]
     public void Run_EmptyBundle_ReturnsUnknown()
     {
         var bundle = new DiagnosticBundle

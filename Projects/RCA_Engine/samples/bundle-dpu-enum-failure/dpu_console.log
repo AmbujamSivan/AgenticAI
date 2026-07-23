@@ -1,0 +1,14 @@
+# DPU control-plane console (ARM-side), collected via DPU BMC serial capture
+2026-07-21T07:39:48Z atf: BL2: Booting BL31 (secure monitor) OK
+2026-07-21T07:39:51Z uefi: DPU UEFI DXE dispatch start
+2026-07-21T07:39:57Z uefi: eMMC boot partition 1 selected (active slot)
+2026-07-21T07:40:05Z fw: NIC subsystem firmware image slot 1: crc mismatch (stored 0x8c41f2aa, computed 0x8c41f000)
+2026-07-21T07:40:05Z fw: NIC subsystem firmware load FAILED, staying in pre-init hold
+2026-07-21T07:40:06Z fw: host-facing PF config space gated until NIC subsystem ready
+2026-07-21T07:40:36Z fw: watchdog: recovery attempt 1/3 - reloading image slot 1
+2026-07-21T07:41:10Z fw: NIC subsystem firmware image slot 1: crc mismatch (stored 0x8c41f2aa, computed 0x8c41f000)
+2026-07-21T07:41:10Z fw: watchdog: recovery attempt 2/3 - reloading image slot 1
+2026-07-21T07:41:44Z fw: NIC subsystem firmware image slot 1: crc mismatch (stored 0x8c41f2aa, computed 0x8c41f000)
+2026-07-21T07:41:45Z fw: watchdog: recovery attempt 3/3 exhausted, NIC subsystem HANG in pre-init
+2026-07-21T07:41:46Z ovs-vswitchd[dpu]: waiting for NIC subsystem, datapath not started
+2026-07-21T07:42:02Z healthd: DPU ARM cores nominal, thermals nominal, mgmt link up

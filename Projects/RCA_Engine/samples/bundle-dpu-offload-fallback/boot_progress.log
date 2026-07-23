@@ -1,0 +1,11 @@
+# Platform boot-progress log captured by BMC (POST codes + UEFI stage messages)
+POST 0x02 SEC: CPU early init OK
+POST 0x15 SEC: microcode load OK
+POST 0x32 PEI: memory init OK (24 DIMMs trained)
+POST 0x4F PEI: DXE IPL handoff
+POST 0x61 DXE: driver dispatch start
+POST 0x9A DXE: PCI bus enumeration start
+POST 0x9C DXE: PCI resource allocation complete
+POST 0xB4 DXE: option ROM init complete (all devices)
+POST 0xA0 BDS: boot device selection
+POST 0xAD OS: OS loader handoff

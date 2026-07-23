@@ -28,9 +28,10 @@ against the actual query evidence.
 
 ### 🔎 2. RCA Engine — Agentic Failure Triage for Server Hardware
 An autonomous agent that triages server-node hardware failures from a raw diagnostic
-bundle (Redfish BMC events, PCIe AER registers, kernel dmesg), isolates the failing
-subsystem via LLM tool-calling against native C# parsers, and emits a structured RCA
-report (JSON + Markdown).
+bundle spanning five telemetry sources (Redfish BMC events, PCIe AER registers, kernel
+dmesg, pre-OS boot-stage POST/UEFI logs, and DPU-internal console telemetry), isolates
+the failing subsystem via LLM tool-calling against native C# parsers, and emits a
+structured RCA report (JSON + Markdown) with deterministic cross-checking.
 * **Architecture:** Two-phase agent loop (investigate with tools → validated structured submission) with a deterministic rule-based fallback so the pipeline always ships a report.
 * **Core Tech:** C# (.NET 9), Semantic Kernel, local quantized LLM via Ollama (llama3.2), xUnit, Docker Compose.
 * **[Explore Project 📂](./Projects/RCA_Engine)** | **[Interactive Demo 🖥️](./Projects/RCA_Engine/docs/index.html)**

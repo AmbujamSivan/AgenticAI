@@ -27,6 +27,7 @@ against the actual query evidence.
 * **[Explore Project 📂](./Projects/AeroMindIQ)**
 
 ### 🔎 2. RCA Engine — Agentic Failure Triage for Server Hardware
+[![RCA Engine Tests](https://github.com/AmbujamSivan/AgenticAI/actions/workflows/rca-engine-tests.yml/badge.svg)](https://github.com/AmbujamSivan/AgenticAI/actions/workflows/rca-engine-tests.yml)
 An autonomous agent that triages server-node hardware failures from a raw diagnostic
 bundle spanning five telemetry sources (Redfish BMC events, PCIe AER registers, kernel
 dmesg, pre-OS boot-stage POST/UEFI logs, and DPU-internal console telemetry), isolates

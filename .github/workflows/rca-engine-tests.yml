@@ -1,0 +1,50 @@
+name: RCA Engine Tests
+
+on:
+  pull_request:
+    paths:
+      - "Projects/RCA_Engine/**"
+      - ".github/workflows/rca-engine-tests.yml"
+  push:
+    branches: [main]
+    paths:
+      - "Projects/RCA_Engine/**"
+      - ".github/workflows/rca-engine-tests.yml"
+
+jobs:
+  test:
+    name: Unit tests (.NET 9)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Projects/RCA_Engine
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        # Submodules deliberately not fetched: the DMTF emulator is not needed for these tests.
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Test
+        run: >
+          dotnet test --no-build --configuration Release
+          --logger "trx;LogFileName=test-results.trx"
+          --results-directory TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rca-engine-test-results
+          path: Projects/RCA_Engine/TestResults/
+          retention-days: 30

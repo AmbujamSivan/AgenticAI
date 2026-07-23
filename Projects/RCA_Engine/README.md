@@ -1,5 +1,7 @@
 # Agentic Root-Cause Analysis (RCA) & Failure Triage Engine
 
+[![RCA Engine Tests](https://github.com/AmbujamSivan/AgenticAI/actions/workflows/rca-engine-tests.yml/badge.svg)](https://github.com/AmbujamSivan/AgenticAI/actions/workflows/rca-engine-tests.yml)
+
 An autonomous **C# / .NET 9** agent that triages server-node hardware failures from a raw
 diagnostic bundle. A **Semantic Kernel** orchestrator lets an LLM (local quantized model via
 **Ollama**, or OpenAI / Azure OpenAI) plan tool calls against native diagnostic parsers over

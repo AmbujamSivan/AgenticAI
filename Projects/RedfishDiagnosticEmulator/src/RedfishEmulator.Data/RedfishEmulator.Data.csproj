@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\RedfishEmulator.Core\RedfishEmulator.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Seed inventory shipped inside the assembly so it loads in any host (app or test). -->
+    <EmbeddedResource Include="Seed\*.json" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

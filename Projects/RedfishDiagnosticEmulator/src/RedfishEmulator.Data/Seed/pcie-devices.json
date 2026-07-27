@@ -1,0 +1,62 @@
+[
+  {
+    "@odata.id": "/redfish/v1/Systems/1/PCIeDevices/NIC1",
+    "@odata.type": "#PCIeDevice.v1_16_0.PCIeDevice",
+    "Id": "NIC1",
+    "Name": "ConnectX-7 400GbE Adapter",
+    "Manufacturer": "NVIDIA Corporation",
+    "Model": "ConnectX-7 MCX755106AS",
+    "DeviceType": "MultiFunction",
+    "PCIeInterface": {
+      "LanesInUse": 16,
+      "MaxLanes": 16,
+      "PCIeType": "Gen5",
+      "MaxPCIeType": "Gen5"
+    }
+  },
+  {
+    "@odata.id": "/redfish/v1/Systems/1/PCIeDevices/NVMe1",
+    "@odata.type": "#PCIeDevice.v1_16_0.PCIeDevice",
+    "Id": "NVMe1",
+    "Name": "Boot NVMe SSD 1",
+    "Manufacturer": "Dell Inc.",
+    "Model": "Ent NVMe PM1735a 1.6TB",
+    "DeviceType": "SingleFunction",
+    "PCIeInterface": {
+      "LanesInUse": 4,
+      "MaxLanes": 4,
+      "PCIeType": "Gen4",
+      "MaxPCIeType": "Gen4"
+    }
+  },
+  {
+    "@odata.id": "/redfish/v1/Systems/1/PCIeDevices/NVMe2",
+    "@odata.type": "#PCIeDevice.v1_16_0.PCIeDevice",
+    "Id": "NVMe2",
+    "Name": "Data NVMe SSD 2",
+    "Manufacturer": "Dell Inc.",
+    "Model": "Ent NVMe PM1735a 3.2TB",
+    "DeviceType": "SingleFunction",
+    "PCIeInterface": {
+      "LanesInUse": 4,
+      "MaxLanes": 4,
+      "PCIeType": "Gen4",
+      "MaxPCIeType": "Gen4"
+    }
+  },
+  {
+    "@odata.id": "/redfish/v1/Systems/1/PCIeDevices/RAID1",
+    "@odata.type": "#PCIeDevice.v1_16_0.PCIeDevice",
+    "Id": "RAID1",
+    "Name": "PERC H965i Storage Controller",
+    "Manufacturer": "Broadcom Inc.",
+    "Model": "PERC H965i",
+    "DeviceType": "SingleFunction",
+    "PCIeInterface": {
+      "LanesInUse": 8,
+      "MaxLanes": 8,
+      "PCIeType": "Gen5",
+      "MaxPCIeType": "Gen5"
+    }
+  }
+]

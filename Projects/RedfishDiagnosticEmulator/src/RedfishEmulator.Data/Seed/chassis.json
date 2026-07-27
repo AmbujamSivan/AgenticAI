@@ -1,0 +1,14 @@
+[
+  {
+    "@odata.id": "/redfish/v1/Chassis/1",
+    "@odata.type": "#Chassis.v1_25_0.Chassis",
+    "Id": "1",
+    "Name": "Enclosure",
+    "ChassisType": "RackMount",
+    "Manufacturer": "Dell Inc.",
+    "Model": "PowerEdge XE8640",
+    "SerialNumber": "CN-XE8640-2024-000137",
+    "SKU": "XE8640-4H100",
+    "PowerState": "On"
+  }
+]

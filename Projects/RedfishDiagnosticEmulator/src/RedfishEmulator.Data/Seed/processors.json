@@ -1,0 +1,80 @@
+[
+  {
+    "@odata.id": "/redfish/v1/Systems/1/Processors/CPU1",
+    "@odata.type": "#Processor.v1_18_0.Processor",
+    "Id": "CPU1",
+    "Name": "Processor CPU 1",
+    "Socket": "CPU 1",
+    "ProcessorType": "CPU",
+    "ProcessorArchitecture": "x86-64",
+    "InstructionSet": "x86-64",
+    "Manufacturer": "Intel Corporation",
+    "Model": "Xeon Platinum 8480+",
+    "MaxSpeedMHz": 3800,
+    "TotalCores": 56,
+    "TotalThreads": 112
+  },
+  {
+    "@odata.id": "/redfish/v1/Systems/1/Processors/CPU2",
+    "@odata.type": "#Processor.v1_18_0.Processor",
+    "Id": "CPU2",
+    "Name": "Processor CPU 2",
+    "Socket": "CPU 2",
+    "ProcessorType": "CPU",
+    "ProcessorArchitecture": "x86-64",
+    "InstructionSet": "x86-64",
+    "Manufacturer": "Intel Corporation",
+    "Model": "Xeon Platinum 8480+",
+    "MaxSpeedMHz": 3800,
+    "TotalCores": 56,
+    "TotalThreads": 112
+  },
+  {
+    "@odata.id": "/redfish/v1/Systems/1/Processors/GPU1",
+    "@odata.type": "#Processor.v1_18_0.Processor",
+    "Id": "GPU1",
+    "Name": "Accelerator GPU 1",
+    "Socket": "GPU 1",
+    "ProcessorType": "GPU",
+    "ProcessorArchitecture": "GPU",
+    "Manufacturer": "NVIDIA Corporation",
+    "Model": "H100 80GB HBM3",
+    "MaxSpeedMHz": 1980
+  },
+  {
+    "@odata.id": "/redfish/v1/Systems/1/Processors/GPU2",
+    "@odata.type": "#Processor.v1_18_0.Processor",
+    "Id": "GPU2",
+    "Name": "Accelerator GPU 2",
+    "Socket": "GPU 2",
+    "ProcessorType": "GPU",
+    "ProcessorArchitecture": "GPU",
+    "Manufacturer": "NVIDIA Corporation",
+    "Model": "H100 80GB HBM3",
+    "MaxSpeedMHz": 1980
+  },
+  {
+    "@odata.id": "/redfish/v1/Systems/1/Processors/GPU3",
+    "@odata.type": "#Processor.v1_18_0.Processor",
+    "Id": "GPU3",
+    "Name": "Accelerator GPU 3",
+    "Socket": "GPU 3",
+    "ProcessorType": "GPU",
+    "ProcessorArchitecture": "GPU",
+    "Manufacturer": "NVIDIA Corporation",
+    "Model": "H100 80GB HBM3",
+    "MaxSpeedMHz": 1980
+  },
+  {
+    "@odata.id": "/redfish/v1/Systems/1/Processors/GPU4",
+    "@odata.type": "#Processor.v1_18_0.Processor",
+    "Id": "GPU4",
+    "Name": "Accelerator GPU 4",
+    "Socket": "GPU 4",
+    "ProcessorType": "GPU",
+    "ProcessorArchitecture": "GPU",
+    "Manufacturer": "NVIDIA Corporation",
+    "Model": "H100 80GB HBM3",
+    "MaxSpeedMHz": 1980
+  }
+]

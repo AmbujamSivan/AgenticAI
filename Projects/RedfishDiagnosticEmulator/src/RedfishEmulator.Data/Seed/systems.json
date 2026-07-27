@@ -1,0 +1,14 @@
+[
+  {
+    "Id": "1",
+    "Name": "GPU Compute Node 1",
+    "SystemType": "Physical",
+    "Manufacturer": "Dell Inc.",
+    "Model": "PowerEdge XE8640",
+    "SerialNumber": "CN-XE8640-2024-000137",
+    "SKU": "XE8640-4H100",
+    "UUID": "38937648-2a1f-4e6b-9c07-7b1e2f9a4d51",
+    "BiosVersion": "2.14.2",
+    "PowerState": "On"
+  }
+]

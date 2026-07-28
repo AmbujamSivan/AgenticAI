@@ -29,6 +29,28 @@ public sealed class ComputerSystem : ResourceBase
     public NavigationLink? Processors { get; set; }
     public NavigationLink? Memory { get; set; }
     public NavigationLink? PCIeDevices { get; set; }
+
+    public ComputerSystemActions? Actions { get; set; }
+}
+
+/// <summary>The <c>Actions</c> block of a ComputerSystem (here, OEM actions only).</summary>
+public sealed class ComputerSystemActions
+{
+    public ComputerSystemOemActions? Oem { get; set; }
+}
+
+/// <summary>OEM-defined actions on a ComputerSystem.</summary>
+public sealed class ComputerSystemOemActions
+{
+    [JsonPropertyName("#RedfishEmulator.RunDiagnostics")]
+    public ActionTarget? RunDiagnostics { get; set; }
+}
+
+/// <summary>The invocation target of a Redfish action.</summary>
+public sealed class ActionTarget
+{
+    [JsonPropertyName("target")]
+    public required string Target { get; set; }
 }
 
 /// <summary>Aggregate view of a system's processors (Redfish <c>ProcessorSummary</c>).</summary>

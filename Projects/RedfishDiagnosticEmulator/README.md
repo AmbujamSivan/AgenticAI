@@ -61,7 +61,7 @@ Then browse:
 | **1** | Redfish core model + OData annotation infrastructure (collections, `$metadata`, service doc) | ✅ Done |
 | **2** | Inventory read APIs (Systems, Processors incl. GPU accelerators, Memory, PCIe, Chassis) | ✅ Done |
 | **3** | TelemetryService + MetricReports + Chassis Thermal/Power (time-varying sensors) | ✅ Done |
-| 4 | Diagnostics engine (async TaskService passes) | ⬜ |
+| **4** | Diagnostics engine — RunDiagnostics action, async TaskService, per-component passes | ✅ Done |
 | 5 | Fault-injection profiles (thermal trip, PCIe link down, ECC, GPU off bus) | ⬜ |
 | 6 | Auth (SessionService), ETag, Redfish error responses | ⬜ |
 | 7 | Full test automation (contract, schema, stress, fault modes) | ⬜ |

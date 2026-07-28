@@ -2,6 +2,7 @@ using System.Globalization;
 using RedfishEmulator.Core.Inventory;
 using RedfishEmulator.Core.Models;
 using RedfishEmulator.Core.Models.Common;
+using RedfishEmulator.Core.State;
 using RedfishEmulator.Core.Telemetry;
 
 namespace RedfishEmulator.UnitTests.Telemetry;
@@ -13,7 +14,7 @@ namespace RedfishEmulator.UnitTests.Telemetry;
 public sealed class TelemetryGeneratorTests
 {
     private static TelemetryGenerator At(DateTimeOffset when) =>
-        new(new FakeSeed(), new FixedTime(when));
+        new(new InMemoryComponentRepository(new FakeSeed()), new FixedTime(when));
 
     private static readonly DateTimeOffset T0 = DateTimeOffset.UnixEpoch.AddSeconds(1000);
 

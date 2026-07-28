@@ -1,6 +1,7 @@
 using RedfishEmulator.Core.Inventory;
 using RedfishEmulator.Core.Models;
 using RedfishEmulator.Core.Models.Common;
+using RedfishEmulator.Core.State;
 
 namespace RedfishEmulator.Core.Services;
 
@@ -21,14 +22,14 @@ public sealed class InventoryService : IInventoryService
     private readonly IReadOnlyList<PCIeDevice> _pcieDevices;
     private readonly IReadOnlyDictionary<string, Chassis> _chassis;
 
-    public InventoryService(IInventorySeedSource seed)
+    public InventoryService(IComponentRepository repository)
     {
-        // Phase 2 models a single system; take the first seeded system as "the box".
-        _system = seed.Systems().Single();
-        _processors = seed.Processors();
-        _memory = seed.MemoryModules();
-        _pcieDevices = seed.PCIeDevices();
-        _chassis = seed.Chassis().ToDictionary(c => c.Id!);
+        // Phase 2 models a single system; take the seeded system as "the box".
+        _system = repository.System;
+        _processors = repository.Processors;
+        _memory = repository.MemoryModules;
+        _pcieDevices = repository.PCIeDevices;
+        _chassis = repository.Chassis.ToDictionary(c => c.Id!);
     }
 
     public ResourceCollection GetSystems() => ResourceCollection.Of(
@@ -92,6 +93,16 @@ public sealed class InventoryService : IInventoryService
             Processors = new NavigationLink($"{SystemsBase}/{_system.Id}/Processors"),
             Memory = new NavigationLink($"{SystemsBase}/{_system.Id}/Memory"),
             PCIeDevices = new NavigationLink($"{SystemsBase}/{_system.Id}/PCIeDevices"),
+            Actions = new ComputerSystemActions
+            {
+                Oem = new ComputerSystemOemActions
+                {
+                    RunDiagnostics = new ActionTarget
+                    {
+                        Target = $"{SystemsBase}/{_system.Id}/Actions/Oem/RedfishEmulator.RunDiagnostics",
+                    },
+                },
+            },
         };
     }
 

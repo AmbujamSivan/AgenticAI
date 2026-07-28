@@ -2,6 +2,7 @@ using RedfishEmulator.Core.Inventory;
 using RedfishEmulator.Core.Models;
 using RedfishEmulator.Core.Models.Common;
 using RedfishEmulator.Core.Services;
+using RedfishEmulator.Core.State;
 
 namespace RedfishEmulator.UnitTests.Services;
 
@@ -17,7 +18,7 @@ public sealed class InventoryServiceTests
     [Fact]
     public void GetSystem_counts_only_cpus_in_processor_summary()
     {
-        var service = new InventoryService(new FakeSeed());
+        var service = new InventoryService(new InMemoryComponentRepository(new FakeSeed()));
 
         var system = service.GetSystem(SysId);
 
@@ -29,7 +30,7 @@ public sealed class InventoryServiceTests
     [Fact]
     public void GetSystem_totals_memory_in_gibibytes()
     {
-        var service = new InventoryService(new FakeSeed());
+        var service = new InventoryService(new InMemoryComponentRepository(new FakeSeed()));
 
         var system = service.GetSystem(SysId);
 
@@ -43,7 +44,7 @@ public sealed class InventoryServiceTests
         var seed = new FakeSeed();
         seed.Processors().Single(p => p.Id == "GPU1").Status.Health = Health.Critical;
 
-        var system = new InventoryService(seed).GetSystem(SysId);
+        var system = new InventoryService(new InMemoryComponentRepository(seed)).GetSystem(SysId);
 
         // The whole-system rollup reflects the worst component...
         Assert.Equal(Health.Critical, system!.Status.Health);
@@ -55,7 +56,7 @@ public sealed class InventoryServiceTests
     [Fact]
     public void Unknown_system_returns_null_for_all_lookups()
     {
-        var service = new InventoryService(new FakeSeed());
+        var service = new InventoryService(new InMemoryComponentRepository(new FakeSeed()));
 
         Assert.Null(service.GetSystem("99"));
         Assert.Null(service.GetProcessors("99"));
@@ -66,7 +67,7 @@ public sealed class InventoryServiceTests
     [Fact]
     public void Processor_collection_lists_every_processor()
     {
-        var service = new InventoryService(new FakeSeed());
+        var service = new InventoryService(new InMemoryComponentRepository(new FakeSeed()));
 
         var collection = service.GetProcessors(SysId);
 

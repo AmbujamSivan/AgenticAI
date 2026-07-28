@@ -3,7 +3,7 @@ using RedfishEmulator.Core.Models.Common;
 namespace RedfishEmulator.Core.Models;
 
 /// <summary>A Redfish <c>PCIeDevice</c> — an installed PCI Express device (NIC, NVMe, GPU bridge).</summary>
-public sealed class PCIeDevice : ResourceBase
+public sealed class PCIeDevice : ResourceBase, IDiagnosable
 {
     public string? Manufacturer { get; set; }
     public string? Model { get; set; }

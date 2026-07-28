@@ -34,6 +34,8 @@ public static class RedfishMetadataDocument
         "MetricReportCollection",
         "MetricReport",
         "TaskService",
+        "TaskCollection",
+        "Task",
         "SessionService",
     ];
 

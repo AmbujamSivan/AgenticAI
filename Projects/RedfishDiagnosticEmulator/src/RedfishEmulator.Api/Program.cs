@@ -1,21 +1,34 @@
 using System.Text.Json.Serialization;
 using Microsoft.OpenApi.Models;
+using RedfishEmulator.Core.Diagnostics;
+using RedfishEmulator.Core.Diagnostics.Passes;
 using RedfishEmulator.Core.Inventory;
 using RedfishEmulator.Core.Services;
+using RedfishEmulator.Core.State;
 using RedfishEmulator.Core.Telemetry;
 using RedfishEmulator.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Inventory: JSON seed source (Data) → inventory read service (Core).
-// Singletons so the seeded component state persists for the process lifetime
-// (later phases mutate that state during diagnostics and fault injection).
+// Inventory: JSON seed (Data) → mutable component repository → inventory read service.
+// Singletons so the seeded component state persists for the process lifetime and is
+// shared by every reader (inventory, telemetry, diagnostics mutate the same objects).
 builder.Services.AddSingleton<IInventorySeedSource, JsonInventorySeedSource>();
+builder.Services.AddSingleton<IComponentRepository, InMemoryComponentRepository>();
 builder.Services.AddSingleton<IInventoryService, InventoryService>();
 
 // Telemetry: time-varying sensor generator driven by the system clock.
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<ITelemetryGenerator, TelemetryGenerator>();
+
+// Diagnostics: pluggable per-category passes → engine → async task orchestration.
+builder.Services.AddSingleton<IDiagnosticPass, CpuDiagnosticPass>();
+builder.Services.AddSingleton<IDiagnosticPass, GpuDiagnosticPass>();
+builder.Services.AddSingleton<IDiagnosticPass, MemoryDiagnosticPass>();
+builder.Services.AddSingleton<IDiagnosticPass, PCIeDiagnosticPass>();
+builder.Services.AddSingleton<IDiagnosticEngine, DiagnosticEngine>();
+builder.Services.AddSingleton<ITaskStore, InMemoryTaskStore>();
+builder.Services.AddSingleton<IDiagnosticService, DiagnosticService>();
 
 builder.Services
     .AddControllers()

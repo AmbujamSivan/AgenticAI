@@ -1,7 +1,7 @@
 using System.Globalization;
-using RedfishEmulator.Core.Inventory;
 using RedfishEmulator.Core.Models;
 using RedfishEmulator.Core.Models.Common;
+using RedfishEmulator.Core.State;
 
 namespace RedfishEmulator.Core.Telemetry;
 
@@ -27,13 +27,13 @@ public sealed class TelemetryGenerator : ITelemetryGenerator
     private readonly HashSet<string> _chassisIds;
     private readonly TimeProvider _time;
 
-    public TelemetryGenerator(IInventorySeedSource seed, TimeProvider time)
+    public TelemetryGenerator(IComponentRepository repository, TimeProvider time)
     {
         _time = time;
-        var processors = seed.Processors();
+        var processors = repository.Processors;
         _cpus = processors.Where(p => p.ProcessorType == ProcessorType.CPU).ToList();
         _gpus = processors.Where(p => p.ProcessorType == ProcessorType.GPU).ToList();
-        _chassisIds = seed.Chassis().Select(c => c.Id!).ToHashSet();
+        _chassisIds = repository.Chassis.Select(c => c.Id!).ToHashSet();
     }
 
     public IReadOnlyList<string> ReportIds { get; } =

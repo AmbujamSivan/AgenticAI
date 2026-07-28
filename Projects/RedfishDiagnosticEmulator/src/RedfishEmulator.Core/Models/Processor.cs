@@ -8,7 +8,7 @@ namespace RedfishEmulator.Core.Models;
 /// (<c>CPU</c> vs <c>GPU</c>), which is exactly how a datacenter BMC inventories
 /// host CPUs alongside GPU accelerators.
 /// </summary>
-public sealed class Processor : ResourceBase
+public sealed class Processor : ResourceBase, IDiagnosable
 {
     /// <summary>Physical socket/slot label, e.g. <c>CPU 1</c> or <c>GPU 3</c>.</summary>
     public string? Socket { get; set; }

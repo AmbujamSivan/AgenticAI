@@ -3,7 +3,7 @@ using RedfishEmulator.Core.Models.Common;
 namespace RedfishEmulator.Core.Models;
 
 /// <summary>A Redfish <c>Memory</c> resource — a single memory module (DIMM).</summary>
-public sealed class Memory : ResourceBase
+public sealed class Memory : ResourceBase, IDiagnosable
 {
     /// <summary>Module capacity in MiB.</summary>
     public int? CapacityMiB { get; set; }

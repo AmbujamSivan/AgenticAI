@@ -1,5 +1,9 @@
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.OpenApi.Models;
+using RedfishEmulator.Api.Auth;
+using RedfishEmulator.Api.Filters;
 using RedfishEmulator.Core.Diagnostics;
 using RedfishEmulator.Core.Diagnostics.FaultInjection;
 using RedfishEmulator.Core.Diagnostics.Passes;
@@ -38,8 +42,27 @@ builder.Services.AddSingleton<IFaultProfile, MemoryEccFault>();
 builder.Services.AddSingleton<IFaultProfile, ThermalTripFault>();
 builder.Services.AddSingleton<IFaultRegistry, FaultRegistry>();
 
+// Authentication: Redfish sessions (X-Auth-Token) + HTTP Basic. Every endpoint
+// requires an authenticated user (fallback policy) except those marked [AllowAnonymous]
+// (ServiceRoot, metadata, and session creation).
+builder.Services.AddSingleton<ISessionStore, InMemorySessionStore>();
+builder.Services.AddSingleton<RedfishCredentials>();
 builder.Services
-    .AddControllers()
+    .AddAuthentication(RedfishAuthenticationHandler.SchemeName)
+    .AddScheme<AuthenticationSchemeOptions, RedfishAuthenticationHandler>(
+        RedfishAuthenticationHandler.SchemeName, configureOptions: null);
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
+
+builder.Services
+    .AddControllers(options => options.Filters.Add<RedfishErrorResultFilter>())
+    // Don't let [ApiController] rewrite 4xx results into ProblemDetails; our filter
+    // turns them into Redfish error bodies instead.
+    .ConfigureApiBehaviorOptions(options => options.SuppressMapClientErrors = true)
     .AddJsonOptions(options =>
     {
         // Redfish resources use PascalCase property names and string-valued enums.
@@ -76,11 +99,12 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
 // Convenience: send the bare root to the Redfish service entry point.
-app.MapGet("/", () => Results.Redirect("/redfish/v1")).ExcludeFromDescription();
+app.MapGet("/", () => Results.Redirect("/redfish/v1")).ExcludeFromDescription().AllowAnonymous();
 
 app.Run();
 

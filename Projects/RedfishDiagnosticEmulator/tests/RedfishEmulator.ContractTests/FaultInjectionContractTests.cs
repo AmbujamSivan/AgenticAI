@@ -22,7 +22,7 @@ public sealed class FaultInjectionContractTests
     public async Task ServiceRoot_advertises_the_fault_injection_endpoint()
     {
         using var factory = new WebApplicationFactory<Program>();
-        var client = factory.CreateClient();
+        var client = factory.AuthedClient();
 
         using var doc = JsonDocument.Parse(await client.GetStringAsync("/redfish/v1"));
         var link = doc.RootElement.GetProperty("Oem").GetProperty("RedfishEmulator")
@@ -35,7 +35,7 @@ public sealed class FaultInjectionContractTests
     public async Task Fault_listing_reports_four_inactive_profiles()
     {
         using var factory = new WebApplicationFactory<Program>();
-        var client = factory.CreateClient();
+        var client = factory.AuthedClient();
 
         using var doc = JsonDocument.Parse(await client.GetStringAsync(FaultBase));
         var profiles = doc.RootElement.GetProperty("Profiles");
@@ -48,7 +48,7 @@ public sealed class FaultInjectionContractTests
     public async Task Injected_gpu_fault_fails_diagnostics_then_clears_back_to_healthy()
     {
         using var factory = new WebApplicationFactory<Program>();
-        var client = factory.CreateClient();
+        var client = factory.AuthedClient();
 
         // Inject: GPU falls off the bus.
         await client.PostAsync($"{FaultBase}/GpuOffBus/Activate", content: null);
@@ -68,7 +68,7 @@ public sealed class FaultInjectionContractTests
     public async Task Gpu_fault_surfaces_on_the_component_and_system_rollup()
     {
         using var factory = new WebApplicationFactory<Program>();
-        var client = factory.CreateClient();
+        var client = factory.AuthedClient();
 
         await client.PostAsync($"{FaultBase}/GpuOffBus/Activate", content: null);
 
@@ -84,7 +84,7 @@ public sealed class FaultInjectionContractTests
     public async Task Thermal_trip_pushes_a_cpu_sensor_over_its_critical_threshold()
     {
         using var factory = new WebApplicationFactory<Program>();
-        var client = factory.CreateClient();
+        var client = factory.AuthedClient();
 
         await client.PostAsync($"{FaultBase}/ThermalTrip/Activate", content: null);
 
@@ -103,7 +103,7 @@ public sealed class FaultInjectionContractTests
     public async Task Reset_clears_all_faults()
     {
         using var factory = new WebApplicationFactory<Program>();
-        var client = factory.CreateClient();
+        var client = factory.AuthedClient();
         await client.PostAsync($"{FaultBase}/GpuOffBus/Activate", content: null);
         await client.PostAsync($"{FaultBase}/MemoryEcc/Activate", content: null);
 
@@ -118,7 +118,7 @@ public sealed class FaultInjectionContractTests
     public async Task Unknown_profile_returns_404()
     {
         using var factory = new WebApplicationFactory<Program>();
-        var client = factory.CreateClient();
+        var client = factory.AuthedClient();
 
         var response = await client.PostAsync($"{FaultBase}/NoSuchProfile/Activate", content: null);
 

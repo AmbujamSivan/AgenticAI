@@ -17,7 +17,7 @@ public sealed class TelemetryContractTests : IClassFixture<WebApplicationFactory
     [Fact]
     public async Task TelemetryService_links_to_metric_reports()
     {
-        var client = _factory.CreateClient();
+        var client = _factory.AuthedClient();
 
         var service = await client.GetFromJsonAsync<TelemetryService>("/redfish/v1/TelemetryService");
 
@@ -27,7 +27,7 @@ public sealed class TelemetryContractTests : IClassFixture<WebApplicationFactory
     [Fact]
     public async Task MetricReports_collection_lists_three_reports()
     {
-        var client = _factory.CreateClient();
+        var client = _factory.AuthedClient();
 
         var collection = await client.GetFromJsonAsync<ResourceCollection>(
             "/redfish/v1/TelemetryService/MetricReports");
@@ -38,7 +38,7 @@ public sealed class TelemetryContractTests : IClassFixture<WebApplicationFactory
     [Fact]
     public async Task GpuMetrics_report_carries_values_for_every_gpu()
     {
-        var client = _factory.CreateClient();
+        var client = _factory.AuthedClient();
 
         var report = await client.GetFromJsonAsync<MetricReport>(
             "/redfish/v1/TelemetryService/MetricReports/GPUMetrics");
@@ -49,7 +49,7 @@ public sealed class TelemetryContractTests : IClassFixture<WebApplicationFactory
     [Fact]
     public async Task Thermal_exposes_gpu_temperature_sensors()
     {
-        var client = _factory.CreateClient();
+        var client = _factory.AuthedClient();
 
         using var doc = JsonDocument.Parse(await client.GetStringAsync("/redfish/v1/Chassis/1/Thermal"));
         var temps = doc.RootElement.GetProperty("Temperatures");
@@ -62,7 +62,7 @@ public sealed class TelemetryContractTests : IClassFixture<WebApplicationFactory
     [Fact]
     public async Task Power_reports_consumption_and_supplies()
     {
-        var client = _factory.CreateClient();
+        var client = _factory.AuthedClient();
 
         var power = await client.GetFromJsonAsync<Power>("/redfish/v1/Chassis/1/Power");
 
@@ -73,7 +73,7 @@ public sealed class TelemetryContractTests : IClassFixture<WebApplicationFactory
     [Fact]
     public async Task Chassis_links_thermal_and_power()
     {
-        var client = _factory.CreateClient();
+        var client = _factory.AuthedClient();
 
         var chassis = await client.GetFromJsonAsync<Chassis>("/redfish/v1/Chassis/1");
 
@@ -87,7 +87,7 @@ public sealed class TelemetryContractTests : IClassFixture<WebApplicationFactory
     [InlineData("/redfish/v1/Chassis/99/Power")]
     public async Task Unknown_telemetry_resources_return_404(string url)
     {
-        var client = _factory.CreateClient();
+        var client = _factory.AuthedClient();
 
         var response = await client.GetAsync(url);
 

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RedfishEmulator.Core.Models;
 using RedfishEmulator.Core.Models.Common;
@@ -10,6 +11,7 @@ namespace RedfishEmulator.Api.Controllers;
 /// <c>GET /redfish/v1</c> (the ServiceRoot).
 /// </summary>
 [ApiController]
+[AllowAnonymous]   // ServiceRoot and the version map are unauthenticated per the Redfish spec.
 public sealed class ServiceRootController : ControllerBase
 {
     /// <summary>

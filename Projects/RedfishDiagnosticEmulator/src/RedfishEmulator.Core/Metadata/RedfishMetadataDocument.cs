@@ -37,6 +37,8 @@ public static class RedfishMetadataDocument
         "TaskCollection",
         "Task",
         "SessionService",
+        "SessionCollection",
+        "Session",
     ];
 
     /// <summary>Renders the full EDMX document as XML.</summary>

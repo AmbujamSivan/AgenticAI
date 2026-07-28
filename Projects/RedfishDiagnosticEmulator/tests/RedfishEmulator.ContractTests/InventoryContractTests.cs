@@ -20,7 +20,7 @@ public sealed class InventoryContractTests : IClassFixture<WebApplicationFactory
     [Fact]
     public async Task Systems_collection_contains_the_seeded_system()
     {
-        var client = _factory.CreateClient();
+        var client = _factory.AuthedClient();
 
         var collection = await client.GetFromJsonAsync<ResourceCollection>("/redfish/v1/Systems");
 
@@ -32,7 +32,7 @@ public sealed class InventoryContractTests : IClassFixture<WebApplicationFactory
     [Fact]
     public async Task System_reports_computed_summaries_and_health()
     {
-        var client = _factory.CreateClient();
+        var client = _factory.AuthedClient();
 
         using var doc = JsonDocument.Parse(await client.GetStringAsync("/redfish/v1/Systems/1"));
         var root = doc.RootElement;
@@ -46,7 +46,7 @@ public sealed class InventoryContractTests : IClassFixture<WebApplicationFactory
     [Fact]
     public async Task Processors_collection_includes_cpus_and_gpu_accelerators()
     {
-        var client = _factory.CreateClient();
+        var client = _factory.AuthedClient();
 
         var collection = await client.GetFromJsonAsync<ResourceCollection>(
             "/redfish/v1/Systems/1/Processors");
@@ -57,7 +57,7 @@ public sealed class InventoryContractTests : IClassFixture<WebApplicationFactory
     [Fact]
     public async Task Gpu_processor_is_typed_as_GPU()
     {
-        var client = _factory.CreateClient();
+        var client = _factory.AuthedClient();
 
         var gpu = await client.GetFromJsonAsync<Processor>(
             "/redfish/v1/Systems/1/Processors/GPU1");
@@ -71,7 +71,7 @@ public sealed class InventoryContractTests : IClassFixture<WebApplicationFactory
     [InlineData("/redfish/v1/Systems/1/PCIeDevices", 4)]
     public async Task Component_collections_have_expected_counts(string url, int expected)
     {
-        var client = _factory.CreateClient();
+        var client = _factory.AuthedClient();
 
         var collection = await client.GetFromJsonAsync<ResourceCollection>(url);
 
@@ -81,7 +81,7 @@ public sealed class InventoryContractTests : IClassFixture<WebApplicationFactory
     [Fact]
     public async Task Chassis_is_served_with_type_and_identity()
     {
-        var client = _factory.CreateClient();
+        var client = _factory.AuthedClient();
 
         var chassis = await client.GetFromJsonAsync<Chassis>("/redfish/v1/Chassis/1");
 
@@ -95,7 +95,7 @@ public sealed class InventoryContractTests : IClassFixture<WebApplicationFactory
     [InlineData("/redfish/v1/Chassis/99")]
     public async Task Unknown_resources_return_404(string url)
     {
-        var client = _factory.CreateClient();
+        var client = _factory.AuthedClient();
 
         var response = await client.GetAsync(url);
 

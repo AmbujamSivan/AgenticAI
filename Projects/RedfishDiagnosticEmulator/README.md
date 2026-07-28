@@ -55,10 +55,28 @@ Then browse:
 | `/redfish/v1/TelemetryService/MetricReports` | Live CPU/GPU/power metric reports |
 | `/swagger` | Interactive OpenAPI explorer |
 
+### Authentication
+
+All resources require authentication except the Redfish-mandated public ones
+(`/redfish`, `/redfish/v1`, `/redfish/v1/$metadata`, `/redfish/v1/odata`) and session
+login. Two mechanisms are supported — HTTP Basic and a Redfish session token:
+
+```bash
+# HTTP Basic (demo account: admin / admin, overridable via Redfish__AdminPassword)
+curl -u admin:admin http://localhost:5199/redfish/v1/Systems/1
+
+# Or establish a session and use the returned X-Auth-Token header
+curl -i -X POST http://localhost:5199/redfish/v1/SessionService/Sessions \
+  -H "Content-Type: application/json" -d '{"UserName":"admin","Password":"admin"}'
+curl -H "X-Auth-Token: <token>" http://localhost:5199/redfish/v1/Systems/1
+```
+
+Unauthenticated and not-found requests return the Redfish `error` / `@Message.ExtendedInfo` body.
+
 ### Run a diagnostic pass
 
 ```bash
-curl -X POST http://localhost:5199/redfish/v1/Systems/1/Actions/Oem/RedfishEmulator.RunDiagnostics
+curl -u admin:admin -X POST http://localhost:5199/redfish/v1/Systems/1/Actions/Oem/RedfishEmulator.RunDiagnostics
 # → 202 Accepted, Location: /redfish/v1/TaskService/Tasks/1  (poll it for pass/fail results)
 ```
 
@@ -82,7 +100,7 @@ curl -X POST http://localhost:5199/redfish/v1/Oem/RedfishEmulator/FaultInjection
 | **3** | TelemetryService + MetricReports + Chassis Thermal/Power (time-varying sensors) | ✅ Done |
 | **4** | Diagnostics engine — RunDiagnostics action, async TaskService, per-component passes | ✅ Done |
 | **5** | Fault-injection profiles (GPU off bus, PCIe link down, ECC, thermal trip) + OEM toggle | ✅ Done |
-| 6 | Auth (SessionService), ETag, Redfish error responses | ⬜ |
+| **6** | Auth — SessionService, HTTP Basic + `X-Auth-Token`, Redfish `ExtendedInfo` errors | ✅ Done (ETag/If-Match next) |
 | 7 | Full test automation (contract, schema, stress, fault modes) | ⬜ |
 | 8 | Docs, OpenAPI export, Docker | ⬜ |
 

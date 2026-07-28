@@ -25,7 +25,7 @@ public sealed class DiagnosticsContractTests : IClassFixture<WebApplicationFacto
     [Fact]
     public async Task System_advertises_the_run_diagnostics_action()
     {
-        var client = _factory.CreateClient();
+        var client = _factory.AuthedClient();
 
         using var doc = JsonDocument.Parse(await client.GetStringAsync("/redfish/v1/Systems/1"));
         var target = doc.RootElement
@@ -38,7 +38,7 @@ public sealed class DiagnosticsContractTests : IClassFixture<WebApplicationFacto
     [Fact]
     public async Task RunDiagnostics_returns_202_with_task_location()
     {
-        var client = _factory.CreateClient();
+        var client = _factory.AuthedClient();
 
         var response = await client.PostAsync(RunDiagnostics, content: null);
 
@@ -49,7 +49,7 @@ public sealed class DiagnosticsContractTests : IClassFixture<WebApplicationFacto
     [Fact]
     public async Task Triggered_task_is_pollable_and_reports_all_components_healthy()
     {
-        var client = _factory.CreateClient();
+        var client = _factory.AuthedClient();
 
         var post = await client.PostAsync(RunDiagnostics, content: null);
         var taskUrl = post.Headers.Location!.OriginalString;
@@ -64,7 +64,7 @@ public sealed class DiagnosticsContractTests : IClassFixture<WebApplicationFacto
     [Fact]
     public async Task TaskService_lists_triggered_tasks()
     {
-        var client = _factory.CreateClient();
+        var client = _factory.AuthedClient();
         await client.PostAsync(RunDiagnostics, content: null);
 
         var collection = await client.GetFromJsonAsync<ResourceCollection>(
@@ -76,7 +76,7 @@ public sealed class DiagnosticsContractTests : IClassFixture<WebApplicationFacto
     [Fact]
     public async Task RunDiagnostics_on_unknown_system_returns_404()
     {
-        var client = _factory.CreateClient();
+        var client = _factory.AuthedClient();
 
         var response = await client.PostAsync(
             "/redfish/v1/Systems/99/Actions/Oem/RedfishEmulator.RunDiagnostics", content: null);
@@ -89,7 +89,7 @@ public sealed class DiagnosticsContractTests : IClassFixture<WebApplicationFacto
     {
         // Fresh host so the mutation to shared component state doesn't leak into other tests.
         using var factory = new WebApplicationFactory<Program>();
-        var client = factory.CreateClient();
+        var client = factory.AuthedClient();
 
         // Degrade a GPU directly in the live repository (Phase 5 will do this via fault profiles).
         var repository = factory.Services.GetRequiredService<IComponentRepository>();

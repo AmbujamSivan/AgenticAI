@@ -20,7 +20,7 @@ public sealed class FaultModeStressTests
     public async Task Concurrent_diagnostics_under_a_fault_all_report_the_failure()
     {
         using var factory = new WebApplicationFactory<Program>();
-        var client = factory.CreateClient();
+        var client = factory.AuthedClient();
 
         await client.PostAsync($"{FaultBase}/GpuOffBus/Activate", content: null);
 
@@ -38,7 +38,7 @@ public sealed class FaultModeStressTests
     public async Task Concurrent_reads_and_toggles_never_error()
     {
         using var factory = new WebApplicationFactory<Program>();
-        var client = factory.CreateClient();
+        var client = factory.AuthedClient();
 
         // Interleave fault toggles with heavy inventory/telemetry reads.
         var toggles = Enumerable.Range(0, 10).Select(async i =>

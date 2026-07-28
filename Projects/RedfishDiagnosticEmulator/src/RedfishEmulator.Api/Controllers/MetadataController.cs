@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RedfishEmulator.Core.Metadata;
 using RedfishEmulator.Core.Models;
@@ -10,6 +11,7 @@ namespace RedfishEmulator.Api.Controllers;
 /// the OData service document (<c>odata</c>).
 /// </summary>
 [ApiController]
+[AllowAnonymous]   // The OData metadata and service documents are unauthenticated per the Redfish spec.
 public sealed class MetadataController : ControllerBase
 {
     /// <summary>The OData CSDL/EDMX metadata document describing the service schema.</summary>

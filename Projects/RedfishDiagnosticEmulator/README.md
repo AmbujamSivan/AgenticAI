@@ -51,7 +51,26 @@ Then browse:
 |-----|----------------|
 | `/redfish` | Redfish protocol version map |
 | `/redfish/v1` | ServiceRoot — the entry point to the resource tree |
+| `/redfish/v1/Systems/1` | ComputerSystem — inventory, summaries, health rollup |
+| `/redfish/v1/TelemetryService/MetricReports` | Live CPU/GPU/power metric reports |
 | `/swagger` | Interactive OpenAPI explorer |
+
+### Run a diagnostic pass
+
+```bash
+curl -X POST http://localhost:5199/redfish/v1/Systems/1/Actions/Oem/RedfishEmulator.RunDiagnostics
+# → 202 Accepted, Location: /redfish/v1/TaskService/Tasks/1  (poll it for pass/fail results)
+```
+
+### Inject a failure mode (OEM)
+
+```bash
+# Make a GPU "fall off the bus", then re-run diagnostics to see it fail
+curl -X POST http://localhost:5199/redfish/v1/Oem/RedfishEmulator/FaultInjection/GpuOffBus/Activate
+# Available profiles: GpuOffBus, PcieLinkDown, MemoryEcc, ThermalTrip
+# Clear one, or reset the whole platform:
+curl -X POST http://localhost:5199/redfish/v1/Oem/RedfishEmulator/FaultInjection/Reset
+```
 
 ## Build phases
 
@@ -62,7 +81,7 @@ Then browse:
 | **2** | Inventory read APIs (Systems, Processors incl. GPU accelerators, Memory, PCIe, Chassis) | ✅ Done |
 | **3** | TelemetryService + MetricReports + Chassis Thermal/Power (time-varying sensors) | ✅ Done |
 | **4** | Diagnostics engine — RunDiagnostics action, async TaskService, per-component passes | ✅ Done |
-| 5 | Fault-injection profiles (thermal trip, PCIe link down, ECC, GPU off bus) | ⬜ |
+| **5** | Fault-injection profiles (GPU off bus, PCIe link down, ECC, thermal trip) + OEM toggle | ✅ Done |
 | 6 | Auth (SessionService), ETag, Redfish error responses | ⬜ |
 | 7 | Full test automation (contract, schema, stress, fault modes) | ⬜ |
 | 8 | Docs, OpenAPI export, Docker | ⬜ |

@@ -36,4 +36,8 @@ public sealed class ServiceRoot : ResourceBase
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public NavigationLink? SessionService { get; set; }
+
+    /// <summary>Vendor extensions — advertises the OEM fault-injection endpoint.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Dictionary<string, object>? Oem { get; set; }
 }

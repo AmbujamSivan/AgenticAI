@@ -38,10 +38,15 @@ public abstract class ComponentPass : IDiagnosticPass
         var id = component.Id ?? "unknown";
         var label = $"{component.Name ?? id} ({id})";
 
+        // Prefer a specific fault reason (from an injected condition) over a generic message.
+        var reason = component.Status.Conditions?.FirstOrDefault()?.Message;
+
         var (outcome, message) = component.Status.Health switch
         {
-            Health.Critical => (DiagnosticOutcome.Fail, $"{label} reported Critical health and failed diagnostics."),
-            Health.Warning => (DiagnosticOutcome.Warning, $"{label} reported a degraded (Warning) condition."),
+            Health.Critical => (DiagnosticOutcome.Fail,
+                reason is null ? $"{label} reported Critical health and failed diagnostics." : $"{label}: {reason}"),
+            Health.Warning => (DiagnosticOutcome.Warning,
+                reason is null ? $"{label} reported a degraded (Warning) condition." : $"{label}: {reason}"),
             _ => (DiagnosticOutcome.Pass, $"{label} passed all diagnostic checks."),
         };
 

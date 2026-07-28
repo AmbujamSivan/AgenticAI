@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using Microsoft.OpenApi.Models;
 using RedfishEmulator.Core.Diagnostics;
+using RedfishEmulator.Core.Diagnostics.FaultInjection;
 using RedfishEmulator.Core.Diagnostics.Passes;
 using RedfishEmulator.Core.Inventory;
 using RedfishEmulator.Core.Services;
@@ -29,6 +30,13 @@ builder.Services.AddSingleton<IDiagnosticPass, PCIeDiagnosticPass>();
 builder.Services.AddSingleton<IDiagnosticEngine, DiagnosticEngine>();
 builder.Services.AddSingleton<ITaskStore, InMemoryTaskStore>();
 builder.Services.AddSingleton<IDiagnosticService, DiagnosticService>();
+
+// Fault injection: pluggable failure-mode profiles + registry that toggles them.
+builder.Services.AddSingleton<IFaultProfile, GpuOffBusFault>();
+builder.Services.AddSingleton<IFaultProfile, PcieLinkDownFault>();
+builder.Services.AddSingleton<IFaultProfile, MemoryEccFault>();
+builder.Services.AddSingleton<IFaultProfile, ThermalTripFault>();
+builder.Services.AddSingleton<IFaultRegistry, FaultRegistry>();
 
 builder.Services
     .AddControllers()

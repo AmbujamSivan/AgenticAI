@@ -1,4 +1,5 @@
 using System.Globalization;
+using RedfishEmulator.Core.Diagnostics.FaultInjection;
 using RedfishEmulator.Core.Models;
 using RedfishEmulator.Core.Models.Common;
 using RedfishEmulator.Core.State;
@@ -56,12 +57,12 @@ public sealed class TelemetryGenerator : ITelemetryGenerator
         temps.Add(TemperatureSensor(member++, "Inlet Temp", IntakeTemp(s), null, "Intake"));
         foreach (var cpu in _cpus)
         {
-            temps.Add(TemperatureSensor(member++, $"{cpu.Socket} Temp", CpuTemp(cpu.Id!, s), CpuCriticalC, "CPU"));
+            temps.Add(ProcessorTempSensor(member++, cpu, CpuTemp(cpu.Id!, s), CpuCriticalC, "CPU"));
         }
 
         foreach (var gpu in _gpus)
         {
-            temps.Add(TemperatureSensor(member++, $"{gpu.Socket} Temp", GpuTemp(gpu.Id!, s), GpuCriticalC, "GPU"));
+            temps.Add(ProcessorTempSensor(member++, gpu, GpuTemp(gpu.Id!, s), GpuCriticalC, "GPU"));
         }
 
         var fans = Enumerable.Range(1, 4)
@@ -138,8 +139,10 @@ public sealed class TelemetryGenerator : ITelemetryGenerator
         var now = _time.GetUtcNow();
         var values = reportId switch
         {
-            CpuMetricsReport => _cpus.SelectMany(c => ProcessorMetrics(c, CpuTemp(c.Id!, s), CpuUtil(c.Id!, s), now)),
-            GpuMetricsReport => _gpus.SelectMany(g => ProcessorMetrics(g, GpuTemp(g.Id!, s), GpuUtil(g.Id!, s), now)),
+            CpuMetricsReport => _cpus.SelectMany(c =>
+                ProcessorMetrics(c, EffectiveTemp(c, CpuTemp(c.Id!, s), CpuCriticalC), CpuUtil(c.Id!, s), now)),
+            GpuMetricsReport => _gpus.SelectMany(g =>
+                ProcessorMetrics(g, EffectiveTemp(g, GpuTemp(g.Id!, s), GpuCriticalC), GpuUtil(g.Id!, s), now)),
             PowerReport => PowerMetrics(s, now),
             _ => [],
         };
@@ -176,6 +179,37 @@ public sealed class TelemetryGenerator : ITelemetryGenerator
     }
 
     // --- builders ---
+
+    /// <summary>Raises a processor's temperature above its critical threshold when thermal-tripped.</summary>
+    private static double EffectiveTemp(Processor processor, double baseReading, double critical) =>
+        IsThermalTripped(processor) ? critical + 4 : baseReading;
+
+    private static bool IsThermalTripped(Processor processor) =>
+        processor.Status.Conditions?.Any(c => c.MessageId == ThermalTripFault.MessageId) == true;
+
+    /// <summary>
+    /// Builds a processor temperature sensor whose reading reflects a thermal trip and
+    /// whose health is the worse of the reading-based health and the processor's own
+    /// reported health — so an injected fault surfaces in telemetry, not just diagnostics.
+    /// </summary>
+    private static Temperature ProcessorTempSensor(
+        int memberId, Processor processor, double baseReading, double critical, string context)
+    {
+        var reading = EffectiveTemp(processor, baseReading, critical);
+        var readingHealth = ThermalHealth(reading, critical);
+        var componentHealth = processor.Status.Health ?? Health.OK;
+        var health = (Health)Math.Max((int)readingHealth, (int)componentHealth);
+
+        return new Temperature
+        {
+            MemberId = memberId.ToString(CultureInfo.InvariantCulture),
+            Name = $"{processor.Socket} Temp",
+            ReadingCelsius = Math.Round(reading, 1),
+            UpperThresholdCritical = critical,
+            PhysicalContext = context,
+            Status = new Status { State = ResourceState.Enabled, Health = health },
+        };
+    }
 
     private static Temperature TemperatureSensor(
         int memberId, string name, double reading, double? critical, string context) => new()

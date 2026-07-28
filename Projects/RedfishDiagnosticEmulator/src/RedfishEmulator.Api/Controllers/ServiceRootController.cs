@@ -39,5 +39,12 @@ public sealed class ServiceRootController : ControllerBase
         TelemetryService = new NavigationLink("/redfish/v1/TelemetryService"),
         Tasks = new NavigationLink("/redfish/v1/TaskService"),
         SessionService = new NavigationLink("/redfish/v1/SessionService"),
+        Oem = new Dictionary<string, object>
+        {
+            ["RedfishEmulator"] = new
+            {
+                FaultInjection = new NavigationLink("/redfish/v1/Oem/RedfishEmulator/FaultInjection"),
+            },
+        },
     };
 }

@@ -42,6 +42,16 @@ public sealed partial class RcaOrchestrator(LlmOptions llmOptions, ILogger logge
            Flow-offload programming failures with 'falling back to host datapath' point at
            the DPU/SmartNIC offload engine (DpuOffload) — host CPU pressure is the symptom.
 
+        4. Recommend the fix that targets the DEEPEST root cause you found, not the surface
+           symptom — and make sure your recommended actions are consistent with the evidence.
+           If a log already shows that a remediation was tried and failed, do not recommend
+           it again. Concretely: if the DPU console shows a firmware IMAGE is corrupt (e.g. a
+           CRC mismatch) and the device's watchdog already exhausted its recovery retries on
+           that same image, then a reboot or power-cycle only reloads the same bad image and
+           cannot help — the correct fix is to reflash the firmware or boot the alternate
+           image slot. Read the DPU console before recommending a reboot for an enumeration
+           failure.
+
         When you have isolated the failure, call submit_rca_report exactly once with your
         structured verdict, then stop. Keep tool arguments precise. Do not invent evidence:
         cite only what the tools returned.
@@ -138,6 +148,32 @@ public sealed partial class RcaOrchestrator(LlmOptions llmOptions, ILogger logge
                         final.FailingComponent = crossCheck.FailingComponent;
                     }
                 }
+
+                // Remediation safety net: when the categories agree, the deterministic verdict's
+                // recommended actions are evidence-derived and category-correct. If the agent's
+                // actions share nothing with them (e.g. a weak model recommending a warm reboot
+                // when the evidence-backed fix is a firmware reflash), graft the deterministic
+                // actions in rather than shipping a remediation the evidence doesn't support.
+                // Generic across every failure category.
+                if (crossCheck.Category == submitted.Category && crossCheck.RecommendedActions.Count > 0)
+                {
+                    var final = reportPlugin.SubmittedReport!;
+                    if (RemediationDiverges(final.RecommendedActions, crossCheck.RecommendedActions))
+                    {
+                        logger.LogWarning(
+                            "Agent remediation diverges from evidence-derived actions for category {Category}; grafting deterministic actions.",
+                            submitted.Category);
+                        final.Evidence.Add(new Models.EvidenceItem
+                        {
+                            Source = "cross-check",
+                            Detail = "Agent's recommended actions did not address the evidence-derived root cause; " +
+                                     "appended deterministic remediation for this failure category."
+                        });
+                        foreach (var action in crossCheck.RecommendedActions)
+                            if (!final.RecommendedActions.Contains(action))
+                                final.RecommendedActions.Add(action);
+                    }
+                }
             }
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or KernelException)
@@ -165,6 +201,49 @@ public sealed partial class RcaOrchestrator(LlmOptions llmOptions, ILogger logge
         report.TriageDurationSeconds = Math.Round(stopwatch.Elapsed.TotalSeconds, 1);
         return report;
     }
+
+    // Generic recovery / verification / filler words that appear across unrelated
+    // remediations, so sharing one does NOT mean two fixes are actually aligned. Only
+    // substantive fix terms (reflash, firmware, reseat, replace, slot, offload, ...) count.
+    private static readonly HashSet<string> RemediationStopwords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "reboot", "reset", "power", "cycle", "warm", "cold",
+        "verify", "confirm", "check", "ensure", "collect", "capture", "review",
+        "device", "before", "after", "still", "which", "their", "there", "against",
+        "should", "would", "these", "those", "until", "while", "reached", "level",
+        "known", "based", "using", "again", "rely", "reloads", "corrupt", "image",
+        "next", "service", "window", "same", "logs",
+    };
+
+    /// <summary>
+    /// True when the agent's remediation shares NO substantive fix term with any of the
+    /// evidence-derived (deterministic) actions — i.e. the agent is recommending a fix the
+    /// evidence doesn't support, so the deterministic actions should be grafted in.
+    /// </summary>
+    internal static bool RemediationDiverges(IReadOnlyList<string> agentActions, IReadOnlyList<string> deterministicActions)
+    {
+        var agentText = string.Join(" ", agentActions);
+        return !deterministicActions.Any(det => SharesSignificantToken(agentText, det));
+    }
+
+    /// <summary>
+    /// True when <paramref name="candidate"/> shares at least one substantive (non-stopword,
+    /// length ≥ 5) token with <paramref name="agentActions"/> — i.e. the two remediations are
+    /// talking about the same kind of fix, not merely both saying "verify" or "reboot".
+    /// </summary>
+    private static bool SharesSignificantToken(string agentActions, string candidate)
+    {
+        var haystack = agentActions.ToLowerInvariant();
+        foreach (var token in TokenRegex().Matches(candidate).Select(m => m.Value.ToLowerInvariant()))
+        {
+            if (token.Length < 5 || RemediationStopwords.Contains(token)) continue;
+            if (haystack.Contains(token, StringComparison.Ordinal)) return true;
+        }
+        return false;
+    }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"[A-Za-z][A-Za-z-]{2,}")]
+    private static partial System.Text.RegularExpressions.Regex TokenRegex();
 
     /// <summary>Two component strings agree when they reference the same PCIe address (or one contains the other).</summary>
     private static bool ComponentsAgree(string a, string b)

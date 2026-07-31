@@ -30,6 +30,17 @@ public sealed class DpuPlugin(DiagnosticBundle bundle)
         foreach (var group in lines.GroupBy(l => l.Subsystem).OrderByDescending(g => g.Count()))
             sb.AppendLine($"  {group.Key}: {group.Count()}" +
                           (group.Any(l => l.Category != DpuConsoleCategory.Info) ? $" ({group.Count(l => l.Category != DpuConsoleCategory.Info)} errors)" : ""));
+
+        // Surface the highest-signal lines verbatim so the actual cause (e.g. a firmware CRC
+        // mismatch, or an offload steering-table exhaustion) is visible without having to guess
+        // the right search term. Generic across any DPU bundle: just the non-Info lines.
+        var notable = lines.Where(l => l.Category != DpuConsoleCategory.Info).Take(6).ToList();
+        if (notable.Count > 0)
+        {
+            sb.AppendLine("Most significant lines (root-cause candidates — drill here before concluding):");
+            foreach (var line in notable)
+                sb.AppendLine($"  [{line.Timestamp:HH:mm:ss}] {line.Subsystem}: {line.Message}");
+        }
         return sb.ToString();
     }
 

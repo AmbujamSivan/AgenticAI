@@ -11,7 +11,7 @@ log, the platform's **pre-OS boot-progress log** (POST codes / UEFI stages), and
 saw) — isolate the failing subsystem, and emit a **structured RCA report** (JSON + Markdown).
 
 **Demo:** open [`docs/index.html`](docs/index.html) in a browser for an interactive replay of
-the agent's investigations across all three sample failure scenarios.
+the agent's investigations across all five sample failure scenarios.
 
 ## Architecture
 
@@ -63,10 +63,16 @@ the agent's investigations across all three sample failure scenarios.
    must submit a structured verdict (category, failing component, root cause, evidence,
    actions, confidence). Incomplete or invalid submissions are **rejected by the tool**,
    forcing the model to retry — this keeps small quantized models honest.
-3. **Cross-check.** After the agent submits, the rule-based `DeterministicTriage` scorer runs
-   the same evidence independently. If both agree on the category but name different
-   components, the agent is challenged to reconcile; if it can't, the evidence-derived
-   component wins and the correction is recorded in the report as `[cross-check]` evidence.
+3. **Cross-check & remediation safety net.** After the agent submits, the rule-based
+   `DeterministicTriage` scorer runs the same evidence independently. If both agree on the
+   category but name different **components**, the agent is challenged to reconcile; if it
+   can't, the evidence-derived component wins. And if the agent's **recommended actions**
+   share no substantive fix term with the evidence-derived ones (e.g. a weak model saying
+   "reboot" when the DPU console proves the firmware image is corrupt and only a reflash
+   helps), the deterministic actions are grafted in. Both corrections are recorded in the
+   report as `[cross-check]` evidence. Remediation is derived from the **deepest** source:
+   the enumeration bundle's fix is "reflash / boot alternate slot", never "reboot", because
+   the DPU's own watchdog already proved a reload of the corrupt image fails.
 4. **Fallback.** The same deterministic scorer runs standalone when no LLM is reachable
    (`--no-llm`) or the agent fails to submit, so the pipeline always produces a report.
 
@@ -110,7 +116,7 @@ Configuration can also come from environment variables with the `RCA_` prefix, e
 dotnet test
 ```
 
-39 tests cover the AER bit decoder, dmesg classifier, Redfish parser, boot-progress and
+44 tests cover the AER bit decoder, dmesg classifier, Redfish parser, boot-progress and
 DPU-console parsers, and end-to-end deterministic triage of all five sample bundles
 (including DPU-internal and boot-stage evidence assertions).
 

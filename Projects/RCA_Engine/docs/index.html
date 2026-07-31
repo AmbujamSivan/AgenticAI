@@ -185,7 +185,7 @@
     <div class="stats">
       <div class="stat"><b>5</b><span>log sources fused</span></div>
       <div class="stat"><b>17&#x2013;40s</b><span>bundle &#x2192; verdict</span></div>
-      <div class="stat"><b>28</b><span>xunit tests</span></div>
+      <div class="stat"><b>40</b><span>xunit tests</span></div>
       <div class="stat"><b>100%</b><span>local &#x2014; no cloud calls</span></div>
     </div>
   </div>
@@ -459,9 +459,9 @@
           "<b>[pcie-aer]</b> Function 0 link 16GT/s x16 with clean AER \u2014 fabric exonerated",
         ],
         actions: [
-          "Re-flash the NIC-subsystem firmware image (slot 1) via the DPU management plane, or boot from the fallback slot",
-          "Cold power-cycle (not warm reboot); if enumeration still fails, RMA the device",
-          "Verify the slot with a known-good device to exonerate the riser/socket",
+          "Re-flash the NIC-subsystem firmware image (slot 1) via the DPU management plane, or boot from the fallback slot &#x2014; a reboot only reloads the same corrupt image (watchdog already failed 3/3)",
+          "Verify the new image's checksum before the next boot and confirm the functions enumerate on the host",
+          "If the reflash fails or the image re-corrupts, capture the DPU firmware logs and RMA the device (suspect eMMC/flash)",
         ],
       },
     },

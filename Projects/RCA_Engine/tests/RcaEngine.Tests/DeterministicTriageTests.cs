@@ -60,6 +60,23 @@ public class DeterministicTriageTests
     }
 
     [Fact]
+    public void Run_DpuEnumBundle_RecommendsReflashNotReboot()
+    {
+        // The DPU console proves the firmware image is corrupt and watchdog recovery is
+        // exhausted, so the remediation must be reflash / alternate-slot, never "reboot".
+        var bundle = DiagnosticBundle.Load(Path.Combine(SamplesDir(), "bundle-dpu-enum-failure"));
+        var report = DeterministicTriage.Run(bundle);
+
+        Assert.Contains("corrupt", report.RootCause, StringComparison.OrdinalIgnoreCase);
+
+        // The top recommended action must lead with a reflash / alternate-slot fix,
+        // not a reboot or power-cycle (which reloads the same corrupt image).
+        Assert.StartsWith("Reflash", report.RecommendedActions[0], StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(report.RecommendedActions, a =>
+            a.StartsWith("Attempt DPU firmware recovery / cold reset", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void Run_DpuOffloadBundle_CitesDpuInternalEvidence()
     {
         var bundle = DiagnosticBundle.Load(Path.Combine(SamplesDir(), "bundle-dpu-offload-fallback"));

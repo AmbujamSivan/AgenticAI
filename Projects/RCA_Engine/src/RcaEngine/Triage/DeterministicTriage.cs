@@ -39,6 +39,11 @@ public static class DeterministicTriage
         var totalScore = scores.Values.Sum(v => Math.Max(0, v.Score));
         var confidence = Math.Clamp(score / Math.Max(totalScore, 1e-9), 0, 0.95);
 
+        // Enumeration remediation is derived from the deepest evidence (the DPU's own
+        // console), not the category default: a corrupt firmware image that already
+        // exhausted watchdog recovery will not be fixed by a reboot.
+        var (enumRootCause, enumActions) = EnumerationRemediation(bundle, component);
+
         var report = best.Key switch
         {
             FailureCategory.MemorySubsystem => new RcaReport
@@ -88,14 +93,9 @@ public static class DeterministicTriage
                 Category = FailureCategory.PcieEnumeration,
                 FailingComponent = component,
                 Summary = $"PCIe function enumeration failure on {component}: config-space reads failing / functions missing, with device firmware stuck in initialization.",
-                RootCause = $"The device at {component} failed to enumerate — config space unreadable and firmware init timing out. Fault is in the endpoint device (likely DPU firmware/hardware), not the host PCIe fabric.",
+                RootCause = enumRootCause,
                 CustomerImpact = "Network/accelerator functions backed by the device are absent from the host; dependent workloads cannot start or lost connectivity at boot.",
-                RecommendedActions =
-                [
-                    $"Attempt DPU firmware recovery / cold reset (power-cycle, not warm reboot) of {component}",
-                    "If functions still fail to enumerate, collect device firmware logs and RMA the device",
-                    "Verify slot with a known-good device to exonerate the riser/socket"
-                ],
+                RecommendedActions = enumActions,
             },
             FailureCategory.DpuOffload => new RcaReport
             {
@@ -309,6 +309,44 @@ public static class DeterministicTriage
             ?? ExtractPciAddress(enumLines)
             ?? "unknown PCIe device";
         return (score, evidence, component);
+    }
+
+    /// <summary>
+    /// Derives the enumeration root cause and remediation from the deepest available evidence.
+    /// When the DPU's own console shows a firmware IMAGE corruption (CRC mismatch) whose
+    /// watchdog recovery already exhausted its retries, a reboot/power-cycle only reloads the
+    /// same bad image — the fix is to reflash or boot the alternate firmware slot.
+    /// </summary>
+    private static (string RootCause, List<string> Actions) EnumerationRemediation(DiagnosticBundle bundle, string component)
+    {
+        var crcMismatch = bundle.DpuConsole.FirstOrDefault(l =>
+            l.Message.Contains("crc mismatch", StringComparison.OrdinalIgnoreCase) ||
+            l.Message.Contains("image", StringComparison.OrdinalIgnoreCase) && l.Message.Contains("FAILED", StringComparison.OrdinalIgnoreCase));
+        var recoveryExhausted = bundle.DpuConsole.Any(l =>
+            l.Message.Contains("recovery attempt", StringComparison.OrdinalIgnoreCase) &&
+            (l.Message.Contains("exhausted", StringComparison.OrdinalIgnoreCase) || l.Message.Contains("3/3", StringComparison.OrdinalIgnoreCase)));
+
+        if (crcMismatch is not null)
+        {
+            var rootCause =
+                $"The DPU's on-board firmware IMAGE is corrupt: its console reports {crcMismatch.Message.Trim()}"
+                + (recoveryExhausted ? ", and the device's own watchdog exhausted its recovery retries against that same image" : "")
+                + $". The subsystem stays in pre-init and gates the host-facing config space, which is why {component}'s functions fail to enumerate. This is a firmware-image fault, not a host PCIe-fabric or socket problem — and NOT something a reboot can fix, since the boot chain reloads the same corrupt slot.";
+            return (rootCause,
+            [
+                $"Reflash the DPU NIC-subsystem firmware on {component} (or boot the alternate/fallback image slot) — do NOT rely on a reboot, which reloads the same corrupt image",
+                "Verify the new image's checksum before the next boot, and confirm the functions enumerate on the host",
+                "If the reflash fails or the image re-corrupts, capture the DPU firmware logs and RMA the device (suspect eMMC/flash)"
+            ]);
+        }
+
+        return (
+            $"The device at {component} failed to enumerate — config space unreadable and firmware init timing out. Fault is in the endpoint device (likely DPU firmware/hardware), not the host PCIe fabric.",
+            [
+                $"Attempt DPU firmware recovery / cold reset (power-cycle, not warm reboot) of {component}",
+                "If functions still fail to enumerate, collect device firmware logs and RMA the device",
+                "Verify slot with a known-good device to exonerate the riser/socket"
+            ]);
     }
 
     private static (double, List<EvidenceItem>, string) ScoreOffload(DiagnosticBundle bundle)

@@ -1,0 +1,13 @@
+# Local infrastructure for Tier 2 (RAG). Start with: docker compose up -d
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    ports:
+      - "6333:6333"   # REST / dashboard
+      - "6334:6334"   # gRPC (used by CommunicationProtocols.Rag)
+    volumes:
+      - qdrant_storage:/qdrant/storage
+
+volumes:
+  qdrant_storage:

@@ -55,6 +55,17 @@ edge-case hardware failure modes. No real hardware needed.
 * **Core Tech:** C# (.NET 9), ASP.NET Core, DMTF Redfish data model (DSP0266) with OData annotations, Swagger/OpenAPI, xUnit.
 * **[Explore Project 📂](./Projects/RedfishDiagnosticEmulator)** | **[Architecture 📐](./Projects/RedfishDiagnosticEmulator/docs/architecture.md)**
 
+### 🔌 5. Communication Protocols Lab — One Domain, Five Wire Protocols + Agentic MCP/RAG
+A reference project where a single product-catalog domain is exposed over **five transports**
+— REST, GraphQL, gRPC/protobuf, raw WebSocket, and SignalR — each a thin adapter over the
+*same* application service, so the protocols can be compared apples-to-apples. A second tier
+layers an **agentic AI** surface on top: an MCP server that exposes the domain as tools,
+retrieval-augmented `semantic_search` over a vector store, and a Semantic Kernel agent that
+orchestrates both the in-house MCP and an external community MCP.
+* **Architecture:** Shared Domain/Application layer as the single source of truth; every protocol (and the MCP tool layer) is an interchangeable transport adapter — adding one is additive, never a rewrite.
+* **Core Tech:** C# (.NET 9), ASP.NET Core, HotChocolate (GraphQL), gRPC, SignalR, Model Context Protocol (MCP), Qdrant (RAG), Semantic Kernel with a config-switchable LLM (Ollama / OpenAI / Gemini).
+* **[Explore Project 📂](./Projects/CommunicationProtocols)**
+
 ---
 
 ## 🧰 Shared Libraries

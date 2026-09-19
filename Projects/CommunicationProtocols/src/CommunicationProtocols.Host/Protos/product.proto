@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+option csharp_namespace = "CommunicationProtocols.Host.Grpc";
+
+package product;
+
+// The gRPC transport's own contract for the Product domain. protobuf has no
+// decimal type, so price is carried as a double here — fine for a reference, but
+// a real system would use a string or a units/nanos money message to keep precision.
+service ProductCatalog {
+  rpc GetProducts (GetProductsRequest) returns (GetProductsReply);
+  rpc GetProduct  (GetProductRequest)  returns (ProductMessage);
+  rpc CreateProduct (CreateProductRequest) returns (ProductMessage);
+  rpc AdjustStock (AdjustStockRequest) returns (ProductMessage);
+}
+
+message ProductMessage {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  double price = 4;
+  int32 stock = 5;
+}
+
+message GetProductsRequest {}
+
+message GetProductsReply {
+  repeated ProductMessage products = 1;
+}
+
+message GetProductRequest {
+  string id = 1;
+}
+
+message CreateProductRequest {
+  string name = 1;
+  string description = 2;
+  double price = 3;
+  int32 stock = 4;
+}
+
+message AdjustStockRequest {
+  string id = 1;
+  int32 delta = 2;
+}

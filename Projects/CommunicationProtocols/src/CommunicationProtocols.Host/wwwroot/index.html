@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CommunicationProtocols</title>
+  <style>
+    :root {
+      --bg: #f7f7f8; --card: #ffffff; --ink: #1a1a1e; --muted: #6b6b76;
+      --line: #e5e5ea; --accent: #4f46e5; --up: #17803d; --down: #c02626;
+      --chip: #eef0ff; --chip-ink: #4338ca;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #16161a; --card: #1f1f26; --ink: #ececf1; --muted: #a1a1ad;
+        --line: #2c2c35; --accent: #8b83ff; --up: #4ade80; --down: #f87171;
+        --chip: #26264a; --chip-ink: #c7c4ff;
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink);
+      font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 32px 20px 64px; }
+    header h1 { margin: 0 0 4px; font-size: 26px; }
+    header p { margin: 0; color: var(--muted); }
+    .note { margin-top: 14px; padding: 10px 14px; background: var(--chip);
+      color: var(--chip-ink); border-radius: 8px; font-size: 13.5px; }
+    h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .04em;
+      color: var(--muted); margin: 34px 0 12px; }
+    .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+    .card h3 { margin: 0 0 6px; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+    .card p { margin: 0 0 12px; color: var(--muted); font-size: 13.5px; }
+    .card a, code.ep { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; }
+    .card a { display: inline-block; color: var(--accent); text-decoration: none;
+      border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; margin: 2px 4px 2px 0; }
+    .card a:hover { border-color: var(--accent); }
+    code.ep { background: var(--chip); color: var(--chip-ink); padding: 2px 6px; border-radius: 5px; }
+    table { width: 100%; border-collapse: collapse; background: var(--card);
+      border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+    th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+    th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+    tr:last-child td { border-bottom: none; }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .flash { animation: flash 1s ease-out; }
+    @keyframes flash { from { background: var(--chip); } to { background: transparent; } }
+    .live { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
+    .dot.on { background: var(--up); }
+    .feed { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px;
+      background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+      padding: 12px 14px; max-height: 220px; overflow-y: auto; }
+    .feed div { padding: 2px 0; border-bottom: 1px dashed var(--line); }
+    .feed div:last-child { border-bottom: none; }
+    .up { color: var(--up); } .down { color: var(--down); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>CommunicationProtocols</h1>
+      <p>One product-catalog domain, exposed over five protocols &mdash; a personal reference.</p>
+      <div class="note">
+        Every transport below is a thin adapter over the <strong>same</strong>
+        <code class="ep">IProductService</code>. A change made through one shows up in all the others.
+      </div>
+    </header>
+
+    <h2>Request / response</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>REST</h3>
+        <p>Classic Web API controller. Resource URLs, HTTP verbs, JSON.</p>
+        <a href="/swagger" target="_blank">/swagger</a>
+        <a href="/api/products" target="_blank">/api/products</a>
+      </div>
+      <div class="card">
+        <h3>GraphQL</h3>
+        <p>Single endpoint; the client asks for exactly the fields it needs.</p>
+        <a href="/graphql" target="_blank">/graphql (Nitro IDE)</a>
+      </div>
+      <div class="card">
+        <h3>gRPC</h3>
+        <p>Contract-first protobuf over HTTP/2. Reflection enabled.</p>
+        <code class="ep">grpcurl -plaintext localhost:5200 list</code>
+      </div>
+    </div>
+
+    <h2>Live streaming</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>WebSocket</h3>
+        <p>Raw, hand-framed server push. The live feed below uses this endpoint.</p>
+        <code class="ep">ws://localhost:5199/ws/stock</code>
+      </div>
+      <div class="card">
+        <h3>SignalR</h3>
+        <p>Same feed over a hub &mdash; framing, reconnection and client calls for free.</p>
+        <code class="ep">/hubs/stock</code>
+      </div>
+    </div>
+
+    <h2>Live stock (REST snapshot + WebSocket updates)</h2>
+    <div class="live">
+      <span class="dot" id="dot"></span><span id="status">connecting&hellip;</span>
+    </div>
+    <table>
+      <thead><tr><th>Product</th><th class="num">Price</th><th class="num">Stock</th></tr></thead>
+      <tbody id="rows"><tr><td colspan="3">Loading&hellip;</td></tr></tbody>
+    </table>
+
+    <h2>WebSocket feed</h2>
+    <div class="feed" id="feed"></div>
+  </div>
+
+  <script>
+    const rows = document.getElementById('rows');
+    const feed = document.getElementById('feed');
+    const dot = document.getElementById('dot');
+    const status = document.getElementById('status');
+    const state = new Map(); // id -> {name, price, stock}
+
+    const money = n => '$' + Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    function render() {
+      const items = [...state.values()].sort((a, b) => a.name.localeCompare(b.name));
+      rows.innerHTML = items.map(p =>
+        `<tr data-id="${p.id}"><td>${p.name}</td><td class="num">${money(p.price)}</td>` +
+        `<td class="num" data-stock>${p.stock}</td></tr>`).join('');
+    }
+
+    async function loadSnapshot() {
+      const res = await fetch('/api/products');
+      const list = await res.json();
+      for (const p of list) state.set(p.id, p);
+      render();
+    }
+
+    function applyChange(c) {
+      const p = state.get(c.productId);
+      if (p) { p.stock = c.stock; render(); }
+      const cell = rows.querySelector(`tr[data-id="${c.productId}"] [data-stock]`);
+      if (cell) cell.parentElement.classList.add('flash'), setTimeout(() => cell.parentElement.classList.remove('flash'), 1000);
+      const cls = c.delta >= 0 ? 'up' : 'down';
+      const sign = c.delta >= 0 ? '+' : '';
+      const time = new Date(c.at).toLocaleTimeString();
+      const line = document.createElement('div');
+      line.innerHTML = `<span class="${cls}">${sign}${c.delta}</span> ${c.name} &rarr; stock ${c.stock} <span style="color:var(--muted)">${time}</span>`;
+      feed.prepend(line);
+      while (feed.childElementCount > 40) feed.lastElementChild.remove();
+    }
+
+    function connect() {
+      const ws = new WebSocket(`ws://${location.host}/ws/stock`);
+      ws.onopen = () => { dot.classList.add('on'); status.textContent = 'live via WebSocket'; };
+      ws.onmessage = e => applyChange(JSON.parse(e.data));
+      ws.onclose = () => {
+        dot.classList.remove('on'); status.textContent = 'disconnected — retrying…';
+        setTimeout(connect, 2000);
+      };
+      ws.onerror = () => ws.close();
+    }
+
+    loadSnapshot().then(connect);
+  </script>
+</body>
+</html>

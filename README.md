@@ -46,6 +46,15 @@ account management — no real hardware needed.
 * **Core Tech:** Python, DMTF Redfish schema, requests-based session auth.
 * **[Explore Project 📂](./Projects/RedfishAPI)** | **[Library 📚](./Shared/redfish_toolkit)**
 
+### 🩺 4. Redfish Diagnostic Emulator — Mock BMC with Fault Injection
+A Redfish-compliant mock **BMC (Baseboard Management Controller)** that exposes DMTF
+Redfish REST APIs to report component inventory (CPU, GPU accelerators, PCIe devices),
+stream platform telemetry, and run automated diagnostic passes — including under injected,
+edge-case hardware failure modes. No real hardware needed.
+* **Architecture:** Layered ASP.NET Core service (Api → Core domain → seed Data) validated by three test suites — unit, Redfish/OData contract-conformance, and concurrency + fault-injection stress.
+* **Core Tech:** C# (.NET 9), ASP.NET Core, DMTF Redfish data model (DSP0266) with OData annotations, Swagger/OpenAPI, xUnit.
+* **[Explore Project 📂](./Projects/RedfishDiagnosticEmulator)** | **[Architecture 📐](./Projects/RedfishDiagnosticEmulator/docs/architecture.md)**
+
 ---
 
 ## 🧰 Shared Libraries
@@ -58,6 +67,6 @@ account management — no real hardware needed.
 > API Lab). Clone with `git clone --recurse-submodules`, or run
 > `git submodule update --init` after a plain clone — otherwise that folder will be empty.
 
-Each project directory has its own README with setup instructions. Both projects use
+Each project directory has its own README with setup instructions. Several use
 Docker Compose for their infrastructure (Postgres/Langfuse for AeroMind IQ; Ollama for
-RCA Engine), and both degrade gracefully when optional services are unavailable.
+RCA Engine), and degrade gracefully when optional services are unavailable.

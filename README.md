@@ -5,6 +5,8 @@ multi-agent systems. Each project is self-contained and showcases a different
 architectural pattern of modern AI engineering — multi-agent collaboration, agentic
 tool-use, LLM-as-judge grounding, and local-model orchestration.
 
+> Built with AI-assisted development (Claude, Copilot) — consistent with modern engineering practice.
+
 ---
 
 ## 🛠️ Tech Stack & Concepts
